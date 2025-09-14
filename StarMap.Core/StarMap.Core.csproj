@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DummyProgram\DummyProgram.csproj" />
+    <ProjectReference Include="..\StarMap.Core.Types\StarMap.Core.Types.csproj" />
+    <ProjectReference Include="..\StarMap.Types\StarMap.Types.csproj" />
+  </ItemGroup>
+
+</Project>
