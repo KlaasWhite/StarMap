@@ -1,5 +1,5 @@
 # StarMap
-A POC/test modloader primarly for Kerbal Space Agency   
+A POC/test modloader primarly for Kitten Space Agency   
 This was inspired by https://github.com/cheese3660/KsaLoader for me to learn about assemblyloading.   
 It very heavily relies on AssemblyLoadContexts to load both the game and then the mods in the game.   
 The advantage of this is that different mods can use different versions of the same dependencies.   
