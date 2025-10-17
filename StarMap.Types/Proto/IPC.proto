@@ -1,0 +1,62 @@
+﻿syntax = "proto3";
+
+package StarMap.Types.Proto.IPC;
+
+import "google/protobuf/any.proto";
+
+message PipeMessage {
+	string RequestId = 1;
+	google.protobuf.Any Payload = 2;
+}
+
+message ConnectRequest{
+
+}
+
+message ConnectResponse{
+	string game_location = 1;
+}
+
+message ManagedModsRequest{
+
+}
+
+message ManagedModsResponse{
+	repeated ManagedModInformation mods = 1;
+}
+
+message ManagedModInformation{
+	string name = 1;
+	string version = 2;
+}
+
+message AvailableModsRequest{
+
+}
+
+message AvailableModsResponse{
+	repeated string mods = 1;
+}
+
+message ModInformationRequest{
+	string mod = 1;
+}
+
+message ModInformationResponse{
+	ModInformation mod = 1;
+}
+
+message ModInformation{
+	string name = 1;
+	repeated string available_versions = 2;
+}
+
+message ManagedModUpdate{
+	string name = 1;
+	string before_version = 2;
+	string after_version = 3;
+}
+
+message SetModUpdates{
+	repeated ManagedModUpdate updates = 1;
+}

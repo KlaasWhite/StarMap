@@ -1,55 +1,45 @@
-﻿using DummyProgram;
-using StarMap.Core.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Tomlyn.Model;
-using Tomlyn;
-using System.IO;
+﻿using System.Text.Json;
+using StarMap.Types.Proto.IPC;
 
-namespace StarMap
+namespace StarMapLoader
 {
-    internal class ModRepository : IModRepository
+    internal class ModRepository
     {
-        public List<LoadedModInformation> LoadedModInformation { get; private set; } = [];
+        public List<ManagedModInformation> LoadedModInformation { get; private set; } = [];
         public bool HasChanges { get; private set; }
 
         private readonly string _modsPath;
         private readonly ModDownloader _downloader = new();
 
-        private (string modName, Version? before, Version after)[] _changes = [];
-        
+        private ManagedModUpdate[] _changes = [];
+
 
         public ModRepository(string modsPath)
         {
             _modsPath = modsPath;
 
-            if (!Directory.Exists(modsPath)) 
-            { 
+            if (!Directory.Exists(modsPath))
+            {
                 Directory.CreateDirectory(modsPath);
             }
 
             var filePath = Path.Combine(modsPath, "starmap.json");
-            if (!File.Exists(filePath)) 
-            { 
+            if (!File.Exists(filePath))
+            {
                 File.Create(filePath).Dispose();
-                File.WriteAllText(filePath, JsonSerializer.Serialize(new List<LoadedModInformation>
+                File.WriteAllText(filePath, JsonSerializer.Serialize(new List<ManagedModInformation>
                 {
-                    new LoadedModInformation()
+                    new ManagedModInformation()
                     {
                         Name = "TestMod1",
-                        ModVersion = Version.Parse("2.0.0.0")
+                        Version = "2.0.0.0"
                     }
                 }));
             }
 
             string jsonString = File.ReadAllText(Path.Combine(modsPath, "starmap.json"));
 
-            LoadedModInformation = JsonSerializer.Deserialize<List<LoadedModInformation>>(jsonString) ?? [];
+            LoadedModInformation = JsonSerializer.Deserialize<List<ManagedModInformation>>(jsonString) ?? [];
         }
 
         public string[] GetPossibleMods()
@@ -63,9 +53,9 @@ namespace StarMap
             return _downloader.GetModsFromStore()[modName];
         }
 
-        public void SetModUpdates(IEnumerable<(string modName, Version? before, Version after)> updates)
+        public void SetModUpdates(ManagedModUpdate[] updates)
         {
-            _changes = updates.ToArray();
+            _changes = updates;
             HasChanges = true;
         }
 
@@ -73,11 +63,11 @@ namespace StarMap
         {
             HasChanges = false;
 
-            foreach (var mod in _changes) 
+            foreach (var mod in _changes)
             {
                 try
                 {
-                    var directoryPath = Path.Combine(_modsPath, mod.modName);
+                    var directoryPath = Path.Combine(_modsPath, mod.Name);
 
                     if (Directory.Exists(directoryPath))
                     {
@@ -86,22 +76,22 @@ namespace StarMap
 
                     Directory.CreateDirectory(directoryPath);
 
-                    if (!_downloader.DownloadMod(mod.modName, mod.after, directoryPath) && mod.before is not null)
+                    if (!_downloader.DownloadMod(mod.Name, mod.AfterVersion, directoryPath) && !string.IsNullOrEmpty(mod.BeforeVersion))
                     {
                         Directory.Delete(directoryPath, true);
                         Directory.CreateDirectory(directoryPath);
-                        _downloader.DownloadMod(mod.modName, mod.before, directoryPath);
+                        _downloader.DownloadMod(mod.Name, mod.BeforeVersion, directoryPath);
                     }
                     else
                     {
-                        var newModInfo = new LoadedModInformation()
+                        var newModInfo = new ManagedModInformation()
                         {
-                            ModVersion = mod.after,
-                            Name = mod.modName
+                            Version = mod.AfterVersion,
+                            Name = mod.Name
                         };
 
-                        var index = LoadedModInformation.FindIndex(modInfo => modInfo.Name == mod.modName);
-                        
+                        var index = LoadedModInformation.FindIndex(modInfo => modInfo.Name == mod.Name);
+
                         if (index >= 0)
                         {
                             LoadedModInformation[index] = newModInfo;
@@ -114,7 +104,7 @@ namespace StarMap
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Unable to apply update for mod: {mod.modName} to version {mod.after}: {ex}");
+                    Console.WriteLine($"Unable to apply update for mod: {mod.Name} to version {mod.AfterVersion}: {ex}");
                 }
             }
 

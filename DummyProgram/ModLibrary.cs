@@ -21,7 +21,7 @@ namespace DummyProgram
 
         public void FetchMods()
         {
-            string modsPath = "./mods";
+            string modsPath = Path.GetFullPath("./mods");
             if (!Directory.Exists(modsPath))
             {
                 return;
@@ -70,7 +70,7 @@ namespace DummyProgram
                 }
                 catch
                 {
-                    continue;
+                    throw;
                 }
             }
         }

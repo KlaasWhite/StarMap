@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Loader;
 
-namespace StarMap.Core.Types
+namespace StarMap.Types.Mods
 {
     public interface IModManager
     {

@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DummyProgram\DummyProgram.csproj" />
-    <ProjectReference Include="..\StarMap.Types\StarMap.Types.csproj" />
+    <ProjectReference Include="..\StarMap.API\StarMap.API.csproj" />
     <ProjectReference Include="..\TestMod.Dependency\TestMod.Dependency.csproj" />
   </ItemGroup>
 

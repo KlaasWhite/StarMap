@@ -8,15 +8,10 @@ namespace TestMod2
     {
         public bool ImmediateUnload => false;
 
-        //private static Harmony? _harmony = new Harmony("DoSomething");
-
         public void OnFullyLoaded()
         {
-            //var myClass = new DependencyClass();
-            //var original = typeof(DummyProgram.Screens.GameScreen).GetMethod("DoSomething");
-            //var prefix = typeof(Patcher).GetMethod("DoSomething");
-
-            //_harmony?.Patch(original, prefix: new HarmonyMethod(prefix));
+            var myClass = new DependencyClass();
+            Patcher.Patch();
         }
 
         public void OnImmediatLoad()
@@ -25,8 +20,7 @@ namespace TestMod2
 
         public void Unload()
         {
-            //_harmony.UnpatchAll(_harmony.Id);
-            //Patcher.Unload();
+            Patcher.Unload();
         }
     }
 }

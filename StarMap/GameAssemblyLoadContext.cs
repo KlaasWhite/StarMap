@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 
 namespace StarMap
 {
-    internal class CoreAssemblyLoadContext : AssemblyLoadContext
+    internal class GameAssemblyLoadContext : AssemblyLoadContext
     {
         private readonly AssemblyDependencyResolver _gameDependencyResolver;
         private readonly AssemblyDependencyResolver _starMapDepdencyResolver;
 
-        public CoreAssemblyLoadContext(string gamePath)
+        public GameAssemblyLoadContext(string gamePath)
             : base(isCollectible: true)
         {
             _gameDependencyResolver = new AssemblyDependencyResolver(gamePath);

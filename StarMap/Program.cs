@@ -1,4 +1,4 @@
-﻿using StarMap.Core.Types;
+﻿using StarMap.Types.Pipes;
 using System.Runtime.Loader;
 
 namespace StarMap
@@ -7,50 +7,30 @@ namespace StarMap
     {
         static void Main(string[] args)
         {
-            var gamePath = Path.GetFullPath("./");
-
-            var modRepository = new ModRepository(Path.Combine(gamePath, "mods"));
-
-            var shouldReload = true;
-
-            while (shouldReload)
+            if (args.Length < 1)
             {
-                shouldReload = false;
-
-                RunGame(gamePath, modRepository, args);
-
-                for (int i = 0; i < 100; i++)
-                {
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                }
-
-                Console.ReadLine();
-
-                shouldReload = modRepository.HasChanges;
-                modRepository.ApplyModUpdates();
+                Console.WriteLine("Usage: StarMap <pipeName>");
+                return;
             }
+
+            var pipeName = args[0];
+
+            MainInner(pipeName).GetAwaiter().GetResult();
         }
 
-        static void RunGame(string gamePath, ModRepository modRepository, string[] args)
+        static async Task MainInner(string pipename)
         {
-            var gameAssemblyContext = new CoreAssemblyLoadContext(gamePath);
-
             AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath("./0Harmony.dll"));
-            var modManagerAssembly = gameAssemblyContext.LoadFromAssemblyPath(Path.GetFullPath("./StarMap.Core.dll"));
 
-            var modManagerType = modManagerAssembly.GetTypes().FirstOrDefault((type) => typeof(IModManager).IsAssignableFrom(type) && !type.IsInterface);
-            if (modManagerType is null) return;
-            var createdModManager = Activator.CreateInstance(modManagerType, [gameAssemblyContext, modRepository]);
-            if (createdModManager is not IModManager modManager) return;
-            modManager.Init();
+            var pipeClient = new PipeClient(pipename);
+            var facade = new GameFacade(pipeClient);
+            
+            var gameLocation = await facade.Connect();
+            var gameAssemblyContext = new GameAssemblyLoadContext(Path.GetFullPath(gameLocation));
+            var gameSurveyer = new GameSurveyer(facade, gameAssemblyContext, gameLocation);
+            gameSurveyer.LoadModManagerAndGame();
 
-            var game = gameAssemblyContext.LoadFromAssemblyPath(Path.GetFullPath("./DummyProgram.dll"));
-
-            game.EntryPoint!.Invoke(null, [args]);
-
-            modManager.DeInit();
-            gameAssemblyContext.Unload();
+            await gameSurveyer.RunGame();
         }
     }
 }

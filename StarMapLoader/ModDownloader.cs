@@ -1,4 +1,4 @@
-﻿using StarMap.Core.Types;
+﻿using StarMap.Types.Proto.IPC;
 using System;
 using System.Collections.Generic;
 using System.IO.Compression;
@@ -6,13 +6,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace StarMap
+namespace StarMapLoader
 {
     internal class ModDownloader
     {
         private const string ModLocation = "C:\\data\\programming\\game-modding\\KSA\\Mods";
 
-        public bool DownloadMod(string modName, Version modVersion, string location)
+        public bool DownloadMod(string modName, string modVersion, string location)
         {
             try
             {
@@ -37,14 +37,15 @@ namespace StarMap
 
             mods["TestMod1"] = new ModInformation()
             {
-                Name = "TestMod1",
-                AvailableVersions = [Version.Parse("1.0.0.0"), Version.Parse("2.0.0.0"), Version.Parse("3.0.0.0")]
+                Name = "TestMod1"
             };
+            mods["TestMod1"].AvailableVersions.AddRange(["1.0.0.0", "2.0.0.0", "3.0.0.0"]);
+
             mods["TestMod2"] = new ModInformation()
             {
-                Name = "TestMod2",
-                AvailableVersions = [Version.Parse("1.0.0.0"), Version.Parse("2.0.0.0"), Version.Parse("3.0.0.0")]
+                Name = "TestMod2"
             };
+            mods["TestMod2"].AvailableVersions.AddRange(["1.0.0.0", "2.0.0.0", "3.0.0.0"]);
 
             return mods;
         }

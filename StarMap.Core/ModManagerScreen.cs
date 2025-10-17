@@ -1,6 +1,7 @@
 ﻿using DummyProgram;
 using DummyProgram.Screens;
-using StarMap.Core.Types;
+using StarMap.Types.Mods;
+using StarMap.Types.Proto.IPC;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,9 +14,8 @@ namespace StarMap.Core
     internal sealed class ModManagerScreen : IScreen
     {
         private readonly ModManager _modManager;
-        private readonly IModRepository _modRepository;
 
-        private List<LoadedModInformation> _managedMods = [];
+        private List<ManagedModInformation> _managedMods = [];
         private List<AssemblyName> _unmanagedMods = [];
 
         private List<(string modName, Version? before, Version after)> _changes = [];
@@ -33,20 +33,18 @@ namespace StarMap.Core
 
         private List<Func<IScreen>> _actions = [];
 
-        public ModManagerScreen(ModManager? modManager, IModRepository? modRepository)
+        public ModManagerScreen(ModManager? modManager)
         {
             ArgumentNullException.ThrowIfNull(modManager);
-            ArgumentNullException.ThrowIfNull(modRepository);
 
             _modManager = modManager;
-            _modRepository = modRepository;
 
             RetrieveModInfo();
         }
 
         private void RetrieveModInfo()
         {
-            _managedMods = [.. _modRepository.LoadedModInformation];
+            _managedMods = [.. _modManager.GetManagedMods().Mods];
             _unmanagedMods = _modManager.GetLoadedMods().Where(loadedMod => !_managedMods.Any(managedMod => managedMod.Name == loadedMod.Name)).ToList();
         }
 
@@ -116,8 +114,8 @@ namespace StarMap.Core
             foreach (var mod in _managedMods)
             {
                 var localMod = mod;
-                Console.WriteLine($"{index++}: {localMod.Name}:{localMod.ModVersion}");
-                _actions.Add(() => GoToSpecificMod(localMod.Name, localMod.ModVersion, false));
+                Console.WriteLine($"{index++}: {localMod.Name}:{localMod.Version}");
+                _actions.Add(() => GoToSpecificMod(localMod.Name, Version.Parse(localMod.Version), false));
             }
 
             Console.WriteLine("Unmanaged mods: ");
@@ -164,9 +162,16 @@ namespace StarMap.Core
         private void RenderModInfo()
         {
             if (_currentMod is null) return;
-            var modInformation = _modRepository.GetModInformation(_currentMod.Value.name);
+            var modInformation = _modManager.GetModInformationAsync(_currentMod.Value.name).GetAwaiter().GetResult();
+            if (modInformation is null)
+            {
+                Console.WriteLine($"Unable to retrieve information for mod: {_currentMod.Value.name}");
+                Console.WriteLine($"Return");
+                _actions.Add(GoToModManager);
+                return;
+            }
 
-            var modName = _currentMod.Value.name;
+           var modName = _currentMod.Value.name;
             var version = _currentMod.Value.version;
             var unmanaged = _currentMod.Value.unmanaged;
 
@@ -176,7 +181,7 @@ namespace StarMap.Core
 
             var index = 0;
 
-            foreach (var possibleVersion  in modInformation.AvailableVersions)
+            foreach (var possibleVersion in modInformation.AvailableVersions)
             {
                 if (!unmanaged && possibleVersion.Equals(version))
                 {
@@ -189,7 +194,7 @@ namespace StarMap.Core
                 var localUnmanaged = unmanaged;
 
                 Console.WriteLine($"{index++}: {possibleVersion}");
-                _actions.Add(() => SetModVersion(localName, localVersion, localUnmanaged));
+                _actions.Add(() => SetModVersion(localName, Version.Parse(localVersion), localUnmanaged));
             }
 
             Console.WriteLine($"{index}: Return");
@@ -211,17 +216,17 @@ namespace StarMap.Core
                 }
             }
 
-            var newModInformation = new LoadedModInformation()
+            var newModInformation = new ManagedModInformation()
             {
                 Name = modName,
-                ModVersion = modVersion,
+                Version = modVersion.ToString(),
             };
 
             var index = _managedMods.FindIndex(0, (modInfo) => modInfo.Name == modName);
 
             if (index >= 0)
             {
-                previousVersion = _managedMods[index].ModVersion;
+                previousVersion = Version.Parse(_managedMods[index].Version);
                 _managedMods[index] = newModInformation;
             }
                 
@@ -241,7 +246,17 @@ namespace StarMap.Core
     
         private IScreen ApplyMods()
         {
-            _modRepository.SetModUpdates(_changes);
+            var modUpdates = _changes.Select(change => new ManagedModUpdate()
+            {
+                Name = change.modName,
+                BeforeVersion = change.before?.ToString() ?? "",
+                AfterVersion = change.after.ToString(),
+            });
+
+            var message = new SetModUpdates();
+            message.Updates.AddRange(modUpdates);
+
+            _modManager.SetModUpdates(message).GetAwaiter().GetResult();
 
             return new ExitScreen();
         }

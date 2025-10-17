@@ -8,9 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DummyProgram\DummyProgram.csproj" />
-    <ProjectReference Include="..\StarMap.Core.Types\StarMap.Core.Types.csproj" />
     <ProjectReference Include="..\StarMap.Core\StarMap.Core.csproj" />
+    <ProjectReference Include="..\StarMap.Types\StarMap.Types.csproj" />
   </ItemGroup>
 
 </Project>

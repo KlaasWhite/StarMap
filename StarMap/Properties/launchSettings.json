@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "StarMap": {
+      "commandName": "Project",
+      "commandLineArgs": "starmap_pipe"
+    }
+  }
+}

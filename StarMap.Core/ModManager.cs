@@ -1,9 +1,11 @@
 ﻿
 
 using DummyProgram;
+using Google.Protobuf.WellKnownTypes;
 using HarmonyLib;
-using StarMap.Core.Types;
 using StarMap.Types;
+using StarMap.Types.Mods;
+using StarMap.Types.Proto.IPC;
 using System.Reflection;
 using System.Runtime.Loader;
 
@@ -12,19 +14,21 @@ namespace StarMap.Core
     internal class ModManager : IModManager
     {
         private AssemblyLoadContext? _coreAssemblyLoadContext;
-        private IModRepository? _modRepository;
+        private IGameFacade _gameFacade;
 
-        private Dictionary<Mod, (IStarMapMod mod, ModAssemblyLoadContext assemblyContext)>? _loadedMods = [];
+        private TaskCompletionSource<ManagedModsResponse> _managedMods = new();
+        private readonly Dictionary<Mod, (IStarMapMod mod, ModAssemblyLoadContext assemblyContext)> _loadedMods = [];
 
-        public ModManager(AssemblyLoadContext coreAssemblyLoadContext, IModRepository modRepository)
+        public ModManager(AssemblyLoadContext coreAssemblyLoadContext, IGameFacade gameFacade)
         {
             _coreAssemblyLoadContext = coreAssemblyLoadContext;
-            _modRepository = modRepository;
+            _gameFacade = gameFacade;
         }
 
         public void Init()
         {
-            ModLoaderPatcher.Patch(this, _modRepository);
+            _ = RetrieveManagedMods();
+            ModLoaderPatcher.Patch(this);
         }
 
         public void DeInit() {
@@ -38,9 +42,7 @@ namespace StarMap.Core
             }
 
             _loadedMods.Clear();
-            _loadedMods = null;
             _coreAssemblyLoadContext = null;
-            _modRepository = null;
         }
 
         public void LoadMod(Mod mod)
@@ -72,9 +74,61 @@ namespace StarMap.Core
             }
         }
 
+        public async Task RetrieveManagedMods()
+        {
+            Console.WriteLine("RetrieveManagedMods");
+            var message = new ManagedModsRequest();
+
+            var response = await _gameFacade.RequestData(message);
+
+            Console.WriteLine("RetrieveManagedMods 2");
+
+            if (!response.Is(ManagedModsResponse.Descriptor)) return;
+
+            _managedMods.SetResult(response.Unpack<ManagedModsResponse>());
+        }
+
+        public ManagedModsResponse GetManagedMods()
+        {
+            Console.WriteLine("GetManagedMods");
+            return _managedMods.Task.GetAwaiter().GetResult();
+        }
+
+        public async Task<string[]> GetManagedModsAsync()
+        {
+            var message = new AvailableModsRequest();
+
+            var response = await _gameFacade.RequestData(message);
+
+            if (!response.Is(AvailableModsResponse.Descriptor)) return[];
+
+           return [.. response.Unpack<AvailableModsResponse>().Mods];
+        }
+
+        public async Task<ModInformation?> GetModInformationAsync(string modName)
+        {
+            var message = new ModInformationRequest()
+            {
+                Mod = modName
+            };
+
+            var response = await _gameFacade.RequestData(message);
+
+            if (!response.Is(ModInformationResponse.Descriptor)) return null;
+
+            return response.Unpack<ModInformationResponse>().Mod;
+        }
+
         public AssemblyName[] GetLoadedMods()
         {
+            if (_loadedMods is null) return [];
+
             return _loadedMods.Select(loadedMod => loadedMod.Key.Assembly).ToArray();
+        }
+
+        public async Task SetModUpdates(SetModUpdates update)
+        {
+            await _gameFacade.RequestData(update);
         }
     }
 }

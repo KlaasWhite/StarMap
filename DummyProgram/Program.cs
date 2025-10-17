@@ -28,6 +28,8 @@ namespace DummyProgram
 
                 _currentScreen = _currentScreen.HandleInput(id);
             }
+
+            MainScreen.Screens = null!;
         }
     }
 }

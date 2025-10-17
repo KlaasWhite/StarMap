@@ -4,12 +4,12 @@ using TestMod.Dependency;
 
 namespace TestMod2
 {
-    /*//[HarmonyPatch]
+    [HarmonyPatch]
     internal static class Patcher
     {
-        //private static Harmony? _harmony = new Harmony("TestMod2");
+        private static Harmony? _harmony = new Harmony("TestMod2");
 
-        *//*public static void Patch()
+        public static void Patch()
         {
             _harmony?.PatchAll();
         }
@@ -18,10 +18,10 @@ namespace TestMod2
         {
             _harmony?.UnpatchAll(_harmony.Id);
             _harmony = null;
-        }*/
+        }
 
-        /*[HarmonyPatch(typeof(DummyProgram.Screens.GameScreen), nameof(DummyProgram.Screens.GameScreen.DoSomething))]
-        [HarmonyPrefix]*//*
+        [HarmonyPatch(typeof(DummyProgram.Screens.GameScreen), nameof(DummyProgram.Screens.GameScreen.DoSomething))]
+        [HarmonyPrefix]
         public static void DoSomething(this DummyProgram.Screens.GameScreen __instance)
         {
             var modAssembly = Assembly.GetExecutingAssembly();
@@ -29,5 +29,5 @@ namespace TestMod2
 
             Console.WriteLine($"Hello from {modAssembly.GetName().Name}:{modAssembly.GetName().Version} with dependency {depAssembly.GetName().Name}:{depAssembly.GetName().Version}");
         }
-    }*/
+    }
 }
