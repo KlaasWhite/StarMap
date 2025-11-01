@@ -2,6 +2,8 @@ name: PR Version Preview
 
 on:
     pull_request:
+        # Re-run the version calculation when labels are added or when new commits are pushed
+        types: [opened, synchronize, labeled, reopened, edited]
         branches: [main]
 
 permissions:
@@ -61,14 +63,6 @@ jobs:
                     echo "next=$next"
                     echo "type=$type"
                   fi
-
-            # 3️⃣ Optional debug: show what tags exist and the next version
-            - name: Debug current tags
-              run: |
-                  echo "Git tags in this repo:"
-                  git tag -l
-                  echo "Current latest tag: ${{ steps.version.outputs.current }}"
-                  echo "Predicted next version: ${{ steps.version.outputs.next }}"
 
             # 4️⃣ Comment predicted version on PR
             - name: Comment version preview

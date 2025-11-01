@@ -15,8 +15,9 @@ jobs:
             DOTNET_VERSION: 9.0
             PROJECT: StarMapLoader/StarMapLoader.csproj
             OUTPUT_PATH: ./publish
+            NUGET_SOURCE: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
             # Customize what to exclude from the created ZIP (space-separated patterns)
-            EXCLUDE: "*.pdb *.xml DummyProgram/*"
+            EXCLUDE: "*.pdb *.xml DummyProgram.deps.json DummyProgram.runtimeconfig.json DummyProgram.pdb DummyProgram.exe Tomlyn.dll"
 
         steps:
             - uses: actions/checkout@v4
@@ -66,12 +67,24 @@ jobs:
             - name: Build
               run: dotnet publish ${{ env.PROJECT }} -c Release -o ${{ env.OUTPUT_PATH }}
 
+            - name: Ensure zip is available
+              run: |
+                  sudo apt-get update -y
+                  sudo apt-get install -y zip
+
+            - name: Remove unwanted outputs (DummyProgram)
+              run: |
+                  if [ -d "${{ env.OUTPUT_PATH }}" ]; then
+                    find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type d -name 'DummyProgram*' -exec rm -rf {} + || true
+                    find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f -name 'DummyProgram*' -exec rm -f {} + || true
+                  fi
+
             - name: Package ZIP
               run: |
                   cd ${{ env.OUTPUT_PATH }}
                   # EXCLUDE contains space-separated patterns to pass to zip -x
                   # Use parameter expansion so multiple patterns are honored.
-                  zip -r ../../release-${{ steps.version.outputs.new }}.zip . -x ${EXCLUDE}
+                  zip -r ../../StarMap-${{ steps.version.outputs.new }}.zip . -x ${{env.EXCLUDE}}
                   cd -
 
             - name: Create GitHub Release
@@ -82,4 +95,39 @@ jobs:
                   body: |
                       Automated release for version v${{ steps.version.outputs.new }}
                       Triggered by PR #${{ github.event.pull_request.number }}
-                  files: release-${{ steps.version.outputs.new }}.zip
+                  files: StarMap-${{ steps.version.outputs.new }}.zip
+
+            - name: Check whether StarMap.API changed since previous tag
+              id: api_check
+              run: |
+                  git fetch --tags
+                  current=v${{ steps.version.outputs.new }}
+                  # Get previous tag robustly (skip the current tag)
+                  mapfile -t tags < <(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags)
+                  prev=""
+                  for t in "${tags[@]}"; do
+                    if [ "$t" != "$current" ]; then
+                      prev="$t"
+                      break
+                    fi
+                  done
+                  echo "previous_tag=$prev" >> $GITHUB_OUTPUT
+                  if [ -z "$prev" ]; then
+                    echo "changed=true" >> $GITHUB_OUTPUT
+                    exit 0
+                  fi
+                  diff=$(git diff --name-only "$prev" "$current")
+                  echo "diff_files=$diff" >> $GITHUB_OUTPUT
+                  if echo "$diff" | grep -qE '^StarMap.API/|^StarMap.API.csproj'; then
+                    echo "changed=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "changed=false" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: Pack and push StarMap.API (if changed)
+              if: steps.api_check.outputs.changed == 'true'
+              run: |
+                  dotnet restore StarMap.API/StarMap.API.csproj
+                  dotnet pack StarMap.API/StarMap.API.csproj -c Release -o ./nupkg /p:PackageVersion=${{ steps.version.outputs.new }}
+                  dotnet nuget add source --username "${{ github.actor }}" --password "${{ secrets.GITHUB_TOKEN }}" --store-password-in-clear-text --name github "${{ env.NUGET_SOURCE }}"
+                  dotnet nuget push ./nupkg/*.nupkg --source github --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
