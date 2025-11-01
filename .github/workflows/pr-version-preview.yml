@@ -15,7 +15,11 @@ jobs:
             - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
-
+                  fetch-tags: true      # explicitly fetch tags
+            - name: Debug tags
+              run: |
+                git tag -l
+                git describe --tags --abbrev=0 || echo "No tags found"
             - name: Get latest tag and bump type
               id: version
               run: |
