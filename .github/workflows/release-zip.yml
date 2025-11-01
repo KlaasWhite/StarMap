@@ -55,8 +55,8 @@ jobs:
             patch=$((patch+1)); type="patch"
           fi
 
-          new_version="v${major}.${minor}.${patch}"
-          echo "Next version: v$new_version"
+          new_version="${major}.${minor}.${patch}"
+          echo "Next version: $new_version"
 
           # Export outputs for later steps
           echo "prev=$prev_version" >> $GITHUB_OUTPUT
@@ -69,8 +69,8 @@ jobs:
           git config user.email "actions@github.com"
 
           NEW_VERSION="${{ steps.version.outputs.new }}"
-          git tag "v$NEW_VERSION"
-          git push origin "v$NEW_VERSION"
+          git tag "$NEW_VERSION"
+          git push origin "$NEW_VERSION"
 
       - name: Build
         run: dotnet publish ${{ env.PROJECT }} -c Release -o ${{ env.OUTPUT_PATH }}
@@ -80,26 +80,19 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y zip
 
-      - name: Remove unwanted outputs (DummyProgram)
-        run: |
-          if [ -d "${{ env.OUTPUT_PATH }}" ]; then
-            find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type d -name 'DummyProgram*' -exec rm -rf {} + || true
-            find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f -name 'DummyProgram*' -exec rm -f {} + || true
-          fi
-
       - name: Package ZIP
         run: |
           cd ${{ env.OUTPUT_PATH }}
-          zip -r ../../StarMap-${{ steps.version.outputs.new }}.zip . -x ${{ env.EXCLUDE }}
+          zip -r $GITHUB_WORKSPACE/StarMap-${{ steps.version.outputs.new }}.zip . -x ${{ env.EXCLUDE }}
           cd -
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.new }}
-          name: Release v${{ steps.version.outputs.new }}
+          tag_name: ${{ steps.version.outputs.new }}
+          name: Release ${{ steps.version.outputs.new }}
           body: |
-            Automated release for version v${{ steps.version.outputs.new }}
+            Automated release for version ${{ steps.version.outputs.new }}
             Triggered by PR #${{ github.event.pull_request.number }}
           files: StarMap-${{ steps.version.outputs.new }}.zip
 
