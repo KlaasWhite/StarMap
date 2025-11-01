@@ -106,18 +106,8 @@ jobs:
       - name: Check whether StarMap.API changed since previous tag
         id: api_check
         run: |
-          git fetch --tags
-          current="v${{ steps.version.outputs.new }}"
-
-          # Get previous tag (excluding current)
-          mapfile -t tags < <(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags)
-          prev=""
-          for t in "${tags[@]}"; do
-            if [ "$t" != "$current" ]; then
-              prev="$t"
-              break
-            fi
-          done
+          current="${{ steps.version.outputs.new }}"
+          prev="${{ steps.version.outputs.prev }}"
 
           echo "previous_tag=$prev" >> $GITHUB_OUTPUT
 
