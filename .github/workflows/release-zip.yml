@@ -23,6 +23,7 @@ jobs:
             - uses: actions/checkout@v4
               with:
                   fetch-depth: 0 # We need full tags history
+                  fetch-tags: true
 
             - uses: actions/setup-dotnet@v4
               with:
@@ -47,7 +48,13 @@ jobs:
             - name: Calculate next version
               id: version
               run: |
-                  IFS='.' read -r major minor patch <<< "${{ steps.prev.outputs.prev }}"
+                  # Ensure a valid version string is always available
+                  prev_version="${{ steps.prev.outputs.prev }}"
+                  if [ -z "$prev_version" ]; then
+                    prev_version="0.0.0"
+                  fi
+
+                  IFS='.' read -r major minor patch <<< "$prev_version"
                   case "${{ steps.bump.outputs.type }}" in
                     major) ((major++)); minor=0; patch=0;;
                     minor) ((minor++)); patch=0;;
