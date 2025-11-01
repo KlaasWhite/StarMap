@@ -12,8 +12,8 @@ jobs:
             contents: read
             packages: write
         env:
-            DOTNET_VERSION: 8.0
-            PROJECT: src/MyLibrary/MyLibrary.csproj
+            DOTNET_VERSION: 9.0
+            PROJECT: StarMap.API/StarMap.API.csproj
             OUTPUT: ./nupkg
             NUGET_SOURCE: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
@@ -28,11 +28,34 @@ jobs:
               id: version
               run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
+            - name: Check whether StarMap.API changed since previous tag
+              id: check
+              run: |
+                  git fetch --tags
+                  current=${GITHUB_REF_NAME}
+                  # Get previous tag by creation date; empty if none
+                  prev=$(git tag --sort=-creatordate | sed -n '2p' || true)
+                  echo "previous_tag=$prev" >> $GITHUB_OUTPUT
+                  if [ -z "$prev" ]; then
+                    echo "changed=true" >> $GITHUB_OUTPUT
+                    exit 0
+                  fi
+                  # Show diff between previous tag and this tag
+                  diff=$(git diff --name-only "$prev" "refs/tags/$current")
+                  echo "diff_files=$diff" >> $GITHUB_OUTPUT
+                  if echo "$diff" | grep -qE '^StarMap.API/|^StarMap.API.csproj'; then
+                    echo "changed=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "changed=false" >> $GITHUB_OUTPUT
+                  fi
+
             - name: Pack library
+              if: steps.check.outputs.changed == 'true'
               run: dotnet pack ${{ env.PROJECT }} -c Release -o ${{ env.OUTPUT }} /p:PackageVersion=${{ steps.version.outputs.version }}
 
             - name: Add GitHub Packages source
               run: dotnet nuget add source --username "${{ github.actor }}" --password "${{ secrets.GITHUB_TOKEN }}" --store-password-in-clear-text --name github ${{ env.NUGET_SOURCE }}
 
             - name: Push to GitHub Packages
+              if: steps.check.outputs.changed == 'true'
               run: dotnet nuget push ${{ env.OUTPUT }}/*.nupkg --source github --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate

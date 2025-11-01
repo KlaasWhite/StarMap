@@ -12,9 +12,11 @@ jobs:
         permissions:
             contents: write
         env:
-            DOTNET_VERSION: 8.0
-            PROJECT: src/MyApp/MyApp.csproj
+            DOTNET_VERSION: 9.0
+            PROJECT: StarMapLoader/StarMapLoader.csproj
             OUTPUT_PATH: ./publish
+            # Customize what to exclude from the created ZIP (space-separated patterns)
+            EXCLUDE: "*.pdb *.xml DummyProgram/*"
 
         steps:
             - uses: actions/checkout@v4
@@ -67,7 +69,9 @@ jobs:
             - name: Package ZIP
               run: |
                   cd ${{ env.OUTPUT_PATH }}
-                  zip -r ../../release-${{ steps.version.outputs.new }}.zip . -x "*.pdb" "*.xml"
+                  # EXCLUDE contains space-separated patterns to pass to zip -x
+                  # Use parameter expansion so multiple patterns are honored.
+                  zip -r ../../release-${{ steps.version.outputs.new }}.zip . -x ${EXCLUDE}
                   cd -
 
             - name: Create GitHub Release
