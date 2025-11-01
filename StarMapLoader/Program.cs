@@ -9,7 +9,7 @@ namespace StarMapLoader
         {
             MainInner().GetAwaiter().GetResult();
         }
-        //workflow test
+
         static async Task MainInner()
         {
             var config = new LoaderConfig();
