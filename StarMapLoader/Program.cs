@@ -12,22 +12,22 @@ namespace StarMapLoader
 
         static async Task MainInner()
         {
-            var modRepository = new ModRepository(Path.Combine(Path.GetFullPath("./"), "mods"));
+            var config = new LoaderConfig();
+            var modRepository = new ModRepository(config.ModPath);
+
             var shouldReload = true;
+
+            var pipeName = Debugger.IsAttached ? "starmap_pipe" : $"starmap_pipe_{Guid.NewGuid()}";
+            using var pipeServer = new PipeServer(pipeName);
+            using var facade = new LoaderFacade(pipeServer, config, modRepository);
 
             while (shouldReload)
             {
-                var config = new LoaderConfig();
+                CancellationTokenSource stopGameCancelationTokenSource = new();
 
-                var pipeName = Debugger.IsAttached ? "starmap_pipe" : $"starmap_pipe_{Guid.NewGuid()}";
-                using var pipeServer = new PipeServer(pipeName);
-                
+                var gameSupervisor = new GameProcessSupervisor(config.GamePath, facade, pipeServer);
 
-                var facade = new LoaderFacade(pipeServer, config, modRepository);
-
-                var gameSupervisor = new GameProcessSupervisor("StarMap.exe", facade, pipeServer);
-
-                await await gameSupervisor.TryStartGameAsync();
+                await await gameSupervisor.TryStartGameAsync(stopGameCancelationTokenSource.Token);
 
                 shouldReload = modRepository.HasChanges;
                 if (shouldReload)

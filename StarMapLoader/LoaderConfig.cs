@@ -8,6 +8,8 @@ namespace StarMapLoader
 {
     internal class LoaderConfig
     {
-        public string GamePath { get; set; } = "C:\\data\\programming\\game-modding\\KSA\\StarMap\\StarMapLoader\\bin\\Debug\\net9.0";
+        public string GameFolder { get; set; } = "C:\\data\\programming\\game-modding\\KSA\\StarMap\\StarMapLoader\\bin\\Debug\\net9.0";
+        public string GamePath => Path.Combine(GameFolder, "StarMap.exe");
+        public string ModPath => Path.Combine(GameFolder, "mods");
     }
 }

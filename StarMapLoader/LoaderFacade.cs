@@ -35,7 +35,7 @@ namespace StarMapLoader
             {
                 response = new ConnectResponse()
                 {
-                    GameLocation = _config.GamePath,
+                    GameLocation = _config.GameFolder,
                 };
 
                 OnProcessStarted?.Invoke(this, EventArgs.Empty);

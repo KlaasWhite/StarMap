@@ -6,9 +6,10 @@ using StarMap.Types.Proto.IPC;
 
 namespace StarMap
 {
-    internal class GameFacade : IGameFacade
+    internal class GameFacade : IGameFacade, IAsyncDisposable
     {
         private readonly PipeClient _pipe;
+
         private bool _connected = false;
 
         public GameFacade(PipeClient pipe)
@@ -18,10 +19,8 @@ namespace StarMap
 
         public async Task<string> Connect()
         {
-            Console.WriteLine($"Connecting...");
             await _pipe.ConnectAsync(default);
             _connected = true;
-            Console.WriteLine("Connected!");
 
             var connectResponse = await RequestData(new ConnectRequest());
 
@@ -30,12 +29,18 @@ namespace StarMap
             return connectResponse.Unpack<ConnectResponse>().GameLocation;
         }
 
+        public async ValueTask DisposeAsync()
+        {
+            await RequestData(new ClosePipeMessage());
+            _pipe.Dispose();
+        }
+
         public async Task<Any> RequestData(IMessage request)
         {
             if (_pipe is null || !_connected)
                 throw new InvalidOperationException("Pipe is not connected.");
 
-            var messageReceived = new TaskCompletionSource<Any>();
+            var messageReceived = new TaskCompletionSource<Any>(TaskCreationOptions.RunContinuationsAsynchronously);
             var requestId = Guid.NewGuid().ToString();
 
             void Handler(object? sender, Any message)

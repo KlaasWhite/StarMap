@@ -1,5 +1,6 @@
 ﻿using StarMap.Types.Mods;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.Loader;
 
@@ -21,35 +22,31 @@ namespace StarMap
             _gameLocation = location;
         }
 
-        public IModManager? LoadModManagerAndGame()
+        public bool TryLoadModManagerAndGame([NotNullWhen(true)] out IModManager? modManager)
         {
+            modManager = null;
+
             var modManagerAssembly = _gameAssemblyContext.LoadFromAssemblyPath(Path.GetFullPath("./StarMap.Core.dll"));
 
             var modManagerType = modManagerAssembly.GetTypes().FirstOrDefault((type) => typeof(IModManager).IsAssignableFrom(type) && !type.IsInterface);
-            if (modManagerType is null) return null;
+            if (modManagerType is null) return false;
             var createdModManager = Activator.CreateInstance(modManagerType, [_gameAssemblyContext, _facade]);
-            if (createdModManager is not IModManager modManager) return null;
+            if (createdModManager is not IModManager manager) return false;
 
             _game = _gameAssemblyContext.LoadFromAssemblyPath(Path.Combine(_gameLocation, "DummyProgram.dll"));
 
-            modManager.Init();
-            return modManager;
+            _modManager = manager;
+            manager.Init();
+            modManager = manager;
+            return true;
         }
 
-        public Task RunGame()
+        public void RunGame()
         {
             Debug.Assert(_game is not null, "Load needs to be called before running game");
 
-            var gameExitedSources = new TaskCompletionSource();
-
-            _ = Task.Run(() =>
-            {
-                string[] args = [];
-                _game.EntryPoint!.Invoke(null, [args]);
-                gameExitedSources.TrySetResult();
-            });
-
-            return gameExitedSources.Task;
+            string[] args = [];
+            _game.EntryPoint!.Invoke(null, [args]);
         }
 
         public void Dispose()

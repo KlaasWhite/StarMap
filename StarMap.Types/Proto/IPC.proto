@@ -60,3 +60,5 @@ message ManagedModUpdate{
 message SetModUpdates{
 	repeated ManagedModUpdate updates = 1;
 }
+
+message ClosePipeMessage{}

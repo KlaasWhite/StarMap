@@ -39,12 +39,16 @@ namespace StarMap.Types.Pipes
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                if (_client is null)
-                    break;
+                try
+                {
+                    if (_client is null)
+                        break;
 
-                var message = await _client.ReadProtoAsync(cancellationToken);
+                    var message = await _client.ReadProtoAsync(cancellationToken);
 
-                OnMessage?.Invoke(this, message);
+                    _ = Task.Run(() => OnMessage?.Invoke(this, message), cancellationToken);
+                }
+                catch (OperationCanceledException e) { }
             }
         }
 

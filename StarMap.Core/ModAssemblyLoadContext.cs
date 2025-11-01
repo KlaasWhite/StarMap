@@ -9,10 +9,10 @@ using System.Threading.Tasks;
 
 namespace StarMap.Core
 {
-    internal class ModAssemblyLoadContext : AssemblyLoadContext, IDisposable
+    internal class ModAssemblyLoadContext : AssemblyLoadContext
     {
-        private AssemblyLoadContext? _coreAssemblyLoadContext;
-        private AssemblyDependencyResolver? _modDependencyResolver;
+        private readonly AssemblyLoadContext _coreAssemblyLoadContext;
+        private readonly AssemblyDependencyResolver _modDependencyResolver;
 
         public ModAssemblyLoadContext(Mod mod, AssemblyLoadContext coreAssemblyContext)
             : base(isCollectible: true)
@@ -22,12 +22,6 @@ namespace StarMap.Core
             _modDependencyResolver = new AssemblyDependencyResolver(
                 Path.GetFullPath(Path.Combine(mod.DirectoryPath, mod.Assembly.Name + ".dll"))
             );
-        }
-
-        public void Dispose()
-        {
-            _coreAssemblyLoadContext = null;
-            _modDependencyResolver = null;
         }
 
         protected override Assembly? Load(AssemblyName assemblyName)
@@ -42,7 +36,7 @@ namespace StarMap.Core
             if (existingInGameContext != null)
                 return existingInGameContext;
 
-            var foundPath = _modDependencyResolver?.ResolveAssemblyToPath(assemblyName);
+            var foundPath = _modDependencyResolver.ResolveAssemblyToPath(assemblyName);
 
             if (foundPath is null)
                 return null;

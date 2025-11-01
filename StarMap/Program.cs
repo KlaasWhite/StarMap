@@ -18,19 +18,21 @@ namespace StarMap
             MainInner(pipeName).GetAwaiter().GetResult();
         }
 
-        static async Task MainInner(string pipename)
+        static async Task MainInner(string pipeName)
         {
             AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath("./0Harmony.dll"));
 
-            var pipeClient = new PipeClient(pipename);
+            var pipeClient = new PipeClient(pipeName);
             var facade = new GameFacade(pipeClient);
-            
+
             var gameLocation = await facade.Connect();
             var gameAssemblyContext = new GameAssemblyLoadContext(Path.GetFullPath(gameLocation));
             var gameSurveyer = new GameSurveyer(facade, gameAssemblyContext, gameLocation);
-            gameSurveyer.LoadModManagerAndGame();
+            if (!gameSurveyer.TryLoadModManagerAndGame(out _)) return;
 
-            await gameSurveyer.RunGame();
+            gameSurveyer.RunGame();
+
+            await facade.DisposeAsync();
         }
     }
 }

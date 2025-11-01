@@ -15,20 +15,20 @@ namespace StarMapLoader
         private Process? _game;
 
 
-        public GameProcessSupervisor(string path, LoaderFacade facade, PipeServer pipeServer)
+        public GameProcessSupervisor(string gamePath, LoaderFacade facade, PipeServer pipeServer)
         {
-            _gamePath = path;
+            _gamePath = gamePath;
             _facade = facade;
             _pipeServer = pipeServer;
         }
 
-        public async Task<Task> TryStartGameAsync(CancellationToken cancellationToken = default)
+        public async Task<Task<bool>> TryStartGameAsync(CancellationToken cancellationToken)
         {
-            var processExitedTsc = new TaskCompletionSource();
+            var processExitedTsc = new TaskCompletionSource<bool>();
 
             var psi = new ProcessStartInfo
             {
-                FileName = Path.Combine(Path.GetFullPath("./StarMap.exe")),
+                FileName = _gamePath,
                 Arguments = $"{_pipeServer.PipeName}",
                 UseShellExecute = true, // Use the operating system shell to start the process
                 CreateNoWindow = false, // Create a new window for the process
@@ -36,7 +36,7 @@ namespace StarMapLoader
                 RedirectStandardError = false,
             };
 
-            var pipeConntection = _pipeServer.StartAsync(default);
+            var pipeConntection = _pipeServer.StartListening(cancellationToken);
 
             if (Debugger.IsAttached)
             {
@@ -55,23 +55,25 @@ namespace StarMapLoader
 
             await pipeConntection;
 
+            if (cancellationToken.IsCancellationRequested)
+                return Task.FromResult(false);
+
             var processStartedTcs = new TaskCompletionSource();
 
             void OnPrcessStarted(object? sender, EventArgs args)
             {
+                _facade.OnProcessStarted -= OnPrcessStarted;
                 processStartedTcs.TrySetResult();
             }
 
             _facade.OnProcessStarted += OnPrcessStarted;
-
             await processStartedTcs.Task;
-
-            Console.WriteLine("Process started");
 
             _game.EnableRaisingEvents = true;
             _game.Exited += (s, e) =>
             {
-                processExitedTsc.TrySetResult();
+                processExitedTsc.TrySetResult(true);
+                _pipeServer.Stop();
             };
 
             return processExitedTsc.Task;
