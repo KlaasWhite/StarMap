@@ -4,7 +4,7 @@ using System.Runtime.Loader;
 namespace StarMap
 {
     internal class Program
-    {//test
+    {
         static void Main(string[] args)
         {
             if (args.Length < 1)
