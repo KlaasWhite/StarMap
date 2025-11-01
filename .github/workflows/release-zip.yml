@@ -1,0 +1,128 @@
+name: Build and Release ZIP
+
+on:
+    pull_request:
+        types: [closed]
+        branches: [main]
+
+jobs:
+    release:
+        if: github.event.pull_request.merged == true
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            packages: write
+        env:
+            DOTNET_VERSION: 9.0
+            PROJECT: StarMapLoader/StarMapLoader.csproj
+            OUTPUT_PATH: ./publish
+            NUGET_SOURCE: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+            EXCLUDE: "*.pdb *.xml DummyProgram.deps.json DummyProgram.runtimeconfig.json DummyProgram.pdb DummyProgram.exe Tomlyn.dll"
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  fetch-tags: true
+
+            - uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: ${{ env.DOTNET_VERSION }}
+
+            - name: Determine version bump
+              id: version
+              run: |
+                  # Be defensive and robust: use awk to split version numbers and always quote $GITHUB_OUTPUT
+                  git fetch --tags || true
+                  current=$(git describe --tags --abbrev=0 2>/dev/null || true)
+                  if [ -z "$current" ]; then
+                    echo "No tags found, defaulting to v0.0.0"
+                    current="v0.0.0"
+                  fi
+
+                  # Remove leading 'v' then extract parts using awk
+                  ver=${current#v}
+                  major=$(printf "%s" "$ver" | awk -F. '{print $1+0}')
+                  minor=$(printf "%s" "$ver" | awk -F. '{print $2+0}')
+                  patch=$(printf "%s" "$ver" | awk -F. '{print $3+0}')
+
+                  # Determine bump type from PR labels (safe interpolation)
+                  LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
+                  if printf "%s" "$LABELS" | grep -q "major"; then
+                    major=$((major+1)); minor=0; patch=0; type="major"
+                  elif printf "%s" "$LABELS" | grep -q "minor"; then
+                    minor=$((minor+1)); patch=0; type="minor"
+                  else
+                    patch=$((patch+1)); type="patch"
+                  fi
+
+                  new_version="${major}.${minor}.${patch}"
+                  echo "Next version: $new_version"
+
+                  # Export outputs for later steps
+                  echo "prev=$prev_version" >> $GITHUB_OUTPUT
+                  echo "type=$bump_type" >> $GITHUB_OUTPUT
+                  echo "new=$new_version" >> $GITHUB_OUTPUT
+
+            - name: Tag and push new version
+              run: |
+                  git config user.name "github-actions"
+                  git config user.email "actions@github.com"
+
+                  NEW_VERSION="${{ steps.version.outputs.new }}"
+                  git tag "$NEW_VERSION"
+                  git push origin "$NEW_VERSION"
+
+            - name: Build
+              run: dotnet publish ${{ env.PROJECT }} -c Release -o ${{ env.OUTPUT_PATH }}
+
+            - name: Ensure zip is available
+              run: |
+                  sudo apt-get update -y
+                  sudo apt-get install -y zip
+
+            - name: Package ZIP
+              run: |
+                  cd ${{ env.OUTPUT_PATH }}
+                  zip -r $GITHUB_WORKSPACE/StarMap-${{ steps.version.outputs.new }}.zip . -x ${{ env.EXCLUDE }}
+                  cd -
+
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: ${{ steps.version.outputs.new }}
+                  name: Release ${{ steps.version.outputs.new }}
+                  body: |
+                      Automated release for version ${{ steps.version.outputs.new }}
+                      Triggered by PR #${{ github.event.pull_request.number }}
+                  files: StarMap-${{ steps.version.outputs.new }}.zip
+
+            - name: Check whether StarMap.API changed since previous tag
+              id: api_check
+              run: |
+                  current="${{ steps.version.outputs.new }}"
+                  prev="${{ steps.version.outputs.prev }}"
+
+                  echo "previous_tag=$prev" >> $GITHUB_OUTPUT
+
+                  if [ -z "$prev" ]; then
+                    echo "changed=true" >> $GITHUB_OUTPUT
+                    exit 0
+                  fi
+
+                  diff=$(git diff --name-only "$prev" "$current")
+                  echo "diff_files=$diff" >> $GITHUB_OUTPUT
+
+                  if echo "$diff" | grep -qE '^StarMap.API/|^StarMap.API.csproj'; then
+                    echo "changed=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "changed=false" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: Pack and push StarMap.API (if changed)
+              if: steps.api_check.outputs.changed == 'true'
+              run: |
+                  dotnet restore StarMap.API/StarMap.API.csproj
+                  dotnet pack StarMap.API/StarMap.API.csproj -c Release -o ./nupkg /p:PackageVersion=${{ steps.version.outputs.new }}
+                  dotnet nuget add source --username "${{ github.actor }}" --password "${{ secrets.GITHUB_TOKEN }}" --store-password-in-clear-text --name github "${{ env.NUGET_SOURCE }}"
+                  dotnet nuget push ./nupkg/*.nupkg --source github --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
