@@ -31,45 +31,31 @@ jobs:
       - name: Determine version bump
         id: version
         run: |
-          set -euo pipefail
-          set -x
-          
-          git fetch --tags
-
-          # Get the latest tag
-          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          prev_version="${latest_tag#v}"
-          echo "Previous tag: $latest_tag"
-
-          # Determine bump type from PR labels
-          LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
-          bump_type="patch"
-          if [[ "$LABELS" == *"major"* ]]; then
-            bump_type="major"
-          elif [[ "$LABELS" == *"minor"* ]]; then
-            bump_type="minor"
+          # Be defensive and robust: use awk to split version numbers and always quote $GITHUB_OUTPUT
+          git fetch --tags || true
+          current=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -z "$current" ]; then
+            echo "No tags found, defaulting to v0.0.0"
+            current="v0.0.0"
           fi
-          echo "Bump type: $bump_type"
 
-          # Split version into components
-          IFS='.' read -r major minor patch <<< "$prev_version"
+          # Remove leading 'v' then extract parts using awk
+          ver=${current#v}
+          major=$(printf "%s" "$ver" | awk -F. '{print $1+0}')
+          minor=$(printf "%s" "$ver" | awk -F. '{print $2+0}')
+          patch=$(printf "%s" "$ver" | awk -F. '{print $3+0}')
 
-          echo $major   # outputs 1
-          echo $minor   # outputs 2
-          echo $patch   # outputs 3
+          # Determine bump type from PR labels (safe interpolation)
+          LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
+          if printf "%s" "$LABELS" | grep -q "major"; then
+            major=$((major+1)); minor=0; patch=0; type="major"
+          elif printf "%s" "$LABELS" | grep -q "minor"; then
+            minor=$((minor+1)); patch=0; type="minor"
+          else
+            patch=$((patch+1)); type="patch"
+          fi
 
-          major=${major:-0}
-          minor=${minor:-0}
-          patch=${patch:-0}
-        
-          # Increment version based on bump type
-          case "$bump_type" in
-            major) ((major++)); minor=0; patch=0 ;;
-            minor) ((minor++)); patch=0 ;;
-            patch) ((patch++)) ;;
-          esac
-
-          new_version="$major.$minor.$patch"
+          new_version="v${major}.${minor}.${patch}"
           echo "Next version: v$new_version"
 
           # Export outputs for later steps
