@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace StarMapLoader
 {
     internal class Program
-    {
+    {//This is for a test
         static void Main(string[] args)
         {
             MainInner().GetAwaiter().GetResult();
