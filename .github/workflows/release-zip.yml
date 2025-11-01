@@ -1,140 +1,147 @@
 name: Build and Release ZIP
 
 on:
-    pull_request:
-        types: [closed]
-        branches: [main]
+  pull_request:
+    types: [closed]
+    branches: [main]
 
 jobs:
-    release:
-        if: github.event.pull_request.merged == true
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
-        env:
-            DOTNET_VERSION: 9.0
-            PROJECT: StarMapLoader/StarMapLoader.csproj
-            OUTPUT_PATH: ./publish
-            NUGET_SOURCE: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-            # Customize what to exclude from the created ZIP (space-separated patterns)
-            EXCLUDE: "*.pdb *.xml DummyProgram.deps.json DummyProgram.runtimeconfig.json DummyProgram.pdb DummyProgram.exe Tomlyn.dll"
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      DOTNET_VERSION: 9.0
+      PROJECT: StarMapLoader/StarMapLoader.csproj
+      OUTPUT_PATH: ./publish
+      NUGET_SOURCE: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+      EXCLUDE: "*.pdb *.xml DummyProgram.deps.json DummyProgram.runtimeconfig.json DummyProgram.pdb DummyProgram.exe Tomlyn.dll"
 
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0 # We need full tags history
-                  fetch-tags: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
-            - uses: actions/setup-dotnet@v4
-              with:
-                  dotnet-version: ${{ env.DOTNET_VERSION }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-            - name: Get previous version
-              id: prev
-              run: |
-                  git fetch --tags
-                  tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-                  echo "prev=${tag#v}" >> $GITHUB_OUTPUT
+      - name: Determine version bump
+        id: version
+        run: |
+          git fetch --tags
 
-            - name: Determine bump type
-              id: bump
-              run: |
-                  LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
-                  if [[ "$LABELS" == *"major"* ]]; then echo "type=major" >> $GITHUB_OUTPUT
-                  elif [[ "$LABELS" == *"minor"* ]]; then echo "type=minor" >> $GITHUB_OUTPUT
-                  else echo "type=patch" >> $GITHUB_OUTPUT
-                  fi
+          # Get the latest tag
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          prev_version="${latest_tag#v}"
+          echo "Previous tag: $latest_tag"
 
-            - name: Calculate next version
-              id: version
-              run: |
-                  # Ensure a valid version string is always available
-                  prev_version="${{ steps.prev.outputs.prev }}"
-                  if [ -z "$prev_version" ]; then
-                    prev_version="0.0.0"
-                  fi
+          # Determine bump type from PR labels
+          LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
+          bump_type="patch"
+          if [[ "$LABELS" == *"major"* ]]; then
+            bump_type="major"
+          elif [[ "$LABELS" == *"minor"* ]]; then
+            bump_type="minor"
+          fi
+          echo "Bump type: $bump_type"
 
-                  IFS='.' read -r major minor patch <<< "$prev_version"
-                  case "${{ steps.bump.outputs.type }}" in
-                    major) ((major++)); minor=0; patch=0;;
-                    minor) ((minor++)); patch=0;;
-                    patch) ((patch++));;
-                  esac
-                  new="$major.$minor.$patch"
-                  echo "new=$new" >> $GITHUB_OUTPUT
-                  echo "Next version will be v$new"
+          # Split version into components
+          IFS='.' read -r major minor patch <<< "$prev_version"
 
-            - name: Create Git tag
-              run: |
-                  git config user.name "github-actions"
-                  git config user.email "actions@github.com"
-                  git tag v${{ steps.version.outputs.new }}
-                  git push origin v${{ steps.version.outputs.new }}
+          # Increment version based on bump type
+          case "$bump_type" in
+            major) ((major++)); minor=0; patch=0 ;;
+            minor) ((minor++)); patch=0 ;;
+            patch) ((patch++)) ;;
+          esac
 
-            - name: Build
-              run: dotnet publish ${{ env.PROJECT }} -c Release -o ${{ env.OUTPUT_PATH }}
+          new_version="$major.$minor.$patch"
+          echo "Next version: v$new_version"
 
-            - name: Ensure zip is available
-              run: |
-                  sudo apt-get update -y
-                  sudo apt-get install -y zip
+          # Export outputs for later steps
+          echo "prev=$prev_version" >> $GITHUB_OUTPUT
+          echo "type=$bump_type" >> $GITHUB_OUTPUT
+          echo "new=$new_version" >> $GITHUB_OUTPUT
 
-            - name: Remove unwanted outputs (DummyProgram)
-              run: |
-                  if [ -d "${{ env.OUTPUT_PATH }}" ]; then
-                    find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type d -name 'DummyProgram*' -exec rm -rf {} + || true
-                    find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f -name 'DummyProgram*' -exec rm -f {} + || true
-                  fi
+      - name: Tag and push new version
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
 
-            - name: Package ZIP
-              run: |
-                  cd ${{ env.OUTPUT_PATH }}
-                  # EXCLUDE contains space-separated patterns to pass to zip -x
-                  # Use parameter expansion so multiple patterns are honored.
-                  zip -r ../../StarMap-${{ steps.version.outputs.new }}.zip . -x ${{env.EXCLUDE}}
-                  cd -
+          NEW_VERSION="${{ steps.version.outputs.new }}"
+          git tag "v$NEW_VERSION"
+          git push origin "v$NEW_VERSION"
 
-            - name: Create GitHub Release
-              uses: softprops/action-gh-release@v2
-              with:
-                  tag_name: v${{ steps.version.outputs.new }}
-                  name: Release v${{ steps.version.outputs.new }}
-                  body: |
-                      Automated release for version v${{ steps.version.outputs.new }}
-                      Triggered by PR #${{ github.event.pull_request.number }}
-                  files: StarMap-${{ steps.version.outputs.new }}.zip
+      - name: Build
+        run: dotnet publish ${{ env.PROJECT }} -c Release -o ${{ env.OUTPUT_PATH }}
 
-            - name: Check whether StarMap.API changed since previous tag
-              id: api_check
-              run: |
-                  git fetch --tags
-                  current=v${{ steps.version.outputs.new }}
-                  # Get previous tag robustly (skip the current tag)
-                  mapfile -t tags < <(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags)
-                  prev=""
-                  for t in "${tags[@]}"; do
-                    if [ "$t" != "$current" ]; then
-                      prev="$t"
-                      break
-                    fi
-                  done
-                  echo "previous_tag=$prev" >> $GITHUB_OUTPUT
-                  if [ -z "$prev" ]; then
-                    echo "changed=true" >> $GITHUB_OUTPUT
-                    exit 0
-                  fi
-                  diff=$(git diff --name-only "$prev" "$current")
-                  echo "diff_files=$diff" >> $GITHUB_OUTPUT
-                  if echo "$diff" | grep -qE '^StarMap.API/|^StarMap.API.csproj'; then
-                    echo "changed=true" >> $GITHUB_OUTPUT
-                  else
-                    echo "changed=false" >> $GITHUB_OUTPUT
-                  fi
+      - name: Ensure zip is available
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y zip
 
-            - name: Pack and push StarMap.API (if changed)
-              if: steps.api_check.outputs.changed == 'true'
-              run: |
-                  dotnet restore StarMap.API/StarMap.API.csproj
-                  dotnet pack StarMap.API/StarMap.API.csproj -c Release -o ./nupkg /p:PackageVersion=${{ steps.version.outputs.new }}
-                  dotnet nuget add source --username "${{ github.actor }}" --password "${{ secrets.GITHUB_TOKEN }}" --store-password-in-clear-text --name github "${{ env.NUGET_SOURCE }}"
-                  dotnet nuget push ./nupkg/*.nupkg --source github --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
+      - name: Remove unwanted outputs (DummyProgram)
+        run: |
+          if [ -d "${{ env.OUTPUT_PATH }}" ]; then
+            find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type d -name 'DummyProgram*' -exec rm -rf {} + || true
+            find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f -name 'DummyProgram*' -exec rm -f {} + || true
+          fi
+
+      - name: Package ZIP
+        run: |
+          cd ${{ env.OUTPUT_PATH }}
+          zip -r ../../StarMap-${{ steps.version.outputs.new }}.zip . -x ${{ env.EXCLUDE }}
+          cd -
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.new }}
+          name: Release v${{ steps.version.outputs.new }}
+          body: |
+            Automated release for version v${{ steps.version.outputs.new }}
+            Triggered by PR #${{ github.event.pull_request.number }}
+          files: StarMap-${{ steps.version.outputs.new }}.zip
+
+      - name: Check whether StarMap.API changed since previous tag
+        id: api_check
+        run: |
+          git fetch --tags
+          current="v${{ steps.version.outputs.new }}"
+
+          # Get previous tag (excluding current)
+          mapfile -t tags < <(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags)
+          prev=""
+          for t in "${tags[@]}"; do
+            if [ "$t" != "$current" ]; then
+              prev="$t"
+              break
+            fi
+          done
+
+          echo "previous_tag=$prev" >> $GITHUB_OUTPUT
+
+          if [ -z "$prev" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          diff=$(git diff --name-only "$prev" "$current")
+          echo "diff_files=$diff" >> $GITHUB_OUTPUT
+
+          if echo "$diff" | grep -qE '^StarMap.API/|^StarMap.API.csproj'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Pack and push StarMap.API (if changed)
+        if: steps.api_check.outputs.changed == 'true'
+        run: |
+          dotnet restore StarMap.API/StarMap.API.csproj
+          dotnet pack StarMap.API/StarMap.API.csproj -c Release -o ./nupkg /p:PackageVersion=${{ steps.version.outputs.new }}
+          dotnet nuget add source --username "${{ github.actor }}" --password "${{ secrets.GITHUB_TOKEN }}" --store-password-in-clear-text --name github "${{ env.NUGET_SOURCE }}"
+          dotnet nuget push ./nupkg/*.nupkg --source github --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
