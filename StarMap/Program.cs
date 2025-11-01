@@ -2,7 +2,7 @@
 using System.Runtime.Loader;
 
 namespace StarMap
-{
+{//Test
     internal class Program
     {
         static void Main(string[] args)
