@@ -51,6 +51,10 @@ jobs:
           # Split version into components
           IFS='.' read -r major minor patch <<< "$prev_version"
 
+          echo $major   # outputs 1
+          echo $minor   # outputs 2
+          echo $patch   # outputs 3
+        
           # Increment version based on bump type
           case "$bump_type" in
             major) ((major++)); minor=0; patch=0 ;;
