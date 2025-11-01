@@ -1,0 +1,81 @@
+name: Build and Release ZIP
+
+on:
+    pull_request:
+        types: [closed]
+        branches: [main]
+
+jobs:
+    release:
+        if: github.event.pull_request.merged == true
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        env:
+            DOTNET_VERSION: 8.0
+            PROJECT: src/MyApp/MyApp.csproj
+            OUTPUT_PATH: ./publish
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0 # We need full tags history
+
+            - uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: ${{ env.DOTNET_VERSION }}
+
+            - name: Get previous version
+              id: prev
+              run: |
+                  git fetch --tags
+                  tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+                  echo "prev=${tag#v}" >> $GITHUB_OUTPUT
+
+            - name: Determine bump type
+              id: bump
+              run: |
+                  LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
+                  if [[ "$LABELS" == *"major"* ]]; then echo "type=major" >> $GITHUB_OUTPUT
+                  elif [[ "$LABELS" == *"minor"* ]]; then echo "type=minor" >> $GITHUB_OUTPUT
+                  else echo "type=patch" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: Calculate next version
+              id: version
+              run: |
+                  IFS='.' read -r major minor patch <<< "${{ steps.prev.outputs.prev }}"
+                  case "${{ steps.bump.outputs.type }}" in
+                    major) ((major++)); minor=0; patch=0;;
+                    minor) ((minor++)); patch=0;;
+                    patch) ((patch++));;
+                  esac
+                  new="$major.$minor.$patch"
+                  echo "new=$new" >> $GITHUB_OUTPUT
+                  echo "Next version will be v$new"
+
+            - name: Create Git tag
+              run: |
+                  git config user.name "github-actions"
+                  git config user.email "actions@github.com"
+                  git tag v${{ steps.version.outputs.new }}
+                  git push origin v${{ steps.version.outputs.new }}
+
+            - name: Build
+              run: dotnet publish ${{ env.PROJECT }} -c Release -o ${{ env.OUTPUT_PATH }}
+
+            - name: Package ZIP
+              run: |
+                  cd ${{ env.OUTPUT_PATH }}
+                  zip -r ../../release-${{ steps.version.outputs.new }}.zip . -x "*.pdb" "*.xml"
+                  cd -
+
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: v${{ steps.version.outputs.new }}
+                  name: Release v${{ steps.version.outputs.new }}
+                  body: |
+                      Automated release for version v${{ steps.version.outputs.new }}
+                      Triggered by PR #${{ github.event.pull_request.number }}
+                  files: release-${{ steps.version.outputs.new }}.zip

@@ -1,0 +1,41 @@
+name: PR Version Preview
+
+on:
+    pull_request:
+        branches: [main]
+
+permissions:
+    pull-requests: write
+    contents: read
+
+jobs:
+    preview:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Get latest tag and bump type
+              id: version
+              run: |
+                  git fetch --tags
+                  current=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+                  IFS='.' read -r major minor patch <<< "${current#v}"
+                  LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
+                  if [[ "$LABELS" == *"major"* ]]; then ((major++)); minor=0; patch=0; type="major"
+                  elif [[ "$LABELS" == *"minor"* ]]; then ((minor++)); patch=0; type="minor"
+                  else ((patch++)); type="patch"
+                  fi
+                  next="v$major.$minor.$patch"
+                  echo "next=$next" >> $GITHUB_OUTPUT
+                  echo "type=$type" >> $GITHUB_OUTPUT
+
+            - name: Comment version preview
+              uses: peter-evans/create-or-update-comment@v4
+              with:
+                  issue-number: ${{ github.event.pull_request.number }}
+                  body: |
+                      🧩 **Version Preview**
+                      Current: `${{ steps.version.outputs.type }}`
+                      ➡️ Next version on merge: **${{ steps.version.outputs.next }}**
