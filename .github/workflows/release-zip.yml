@@ -31,6 +31,9 @@ jobs:
       - name: Determine version bump
         id: version
         run: |
+          set -euo pipefail
+          set -x
+          
           git fetch --tags
 
           # Get the latest tag
@@ -54,6 +57,10 @@ jobs:
           echo $major   # outputs 1
           echo $minor   # outputs 2
           echo $patch   # outputs 3
+
+          major=${major:-0}
+          minor=${minor:-0}
+          patch=${patch:-0}
         
           # Increment version based on bump type
           case "$bump_type" in
