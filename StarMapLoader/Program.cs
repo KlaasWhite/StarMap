@@ -11,7 +11,7 @@ namespace StarMapLoader
         }
 
         static async Task MainInner()
-        {
+        {//Test workflow
             var config = new LoaderConfig();
             var modRepository = new ModRepository(config.ModPath);
 
