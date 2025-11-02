@@ -15,13 +15,13 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            # 1️⃣ Checkout full history and all tags
+            # Checkout full history and all tags
             - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
                   fetch-tags: true
 
-            # 2️⃣ Get latest tag and calculate next version
+            # Get latest tag and calculate next version
             - name: Get latest tag and bump type
               id: version
               run: |
@@ -64,13 +64,9 @@ jobs:
                     echo "type=$type"
                   fi
 
-            # 4️⃣ Comment predicted version on PR
             - name: Comment version preview
               uses: peter-evans/create-or-update-comment@v4
               with:
                   issue-number: ${{ github.event.pull_request.number }}
                   body: |
-                      🧩 **Version Preview**
-                      Current latest tag: `${{ steps.version.outputs.current }}`
-                      PR labels: `${{ join(github.event.pull_request.labels.*.name, ', ') }}`
-                      ➡️ **Predicted next version on merge:** **${{ steps.version.outputs.next }}**
+                      **Next version:** **${{ steps.version.outputs.next }}**
