@@ -1,0 +1,36 @@
+name: PR Build check
+
+on:
+    pull_request:
+        # Re-run the version calculation when labels are added or when new commits are pushed
+        types: [opened, synchronize, labeled, reopened, edited]
+        branches: [main]
+
+permissions:
+    pull-requests: write
+    contents: read
+
+jobs:
+    preview:
+        runs-on: ubuntu-latest
+        env:
+            DOTNET_VERSION: 9.0
+            PROJECT: StarMapLoader/StarMapLoader.csproj
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: ${{ env.DOTNET_VERSION }}
+
+            - name: Restore dependencies
+              run: dotnet restore ${{ env.PROJECT }}
+
+            # - name: Run tests
+            #   run: dotnet test --no-build --verbosity normal
+
+            - name: Build
+              run: dotnet build ${{ env.PROJECT }} -c Release
