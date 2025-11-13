@@ -1,11 +1,29 @@
 # StarMap
-A POC/test modloader primarly for Kitten Space Agency   
-This was inspired by https://github.com/cheese3660/KsaLoader for me to learn about assemblyloading.   
-It very heavily relies on AssemblyLoadContexts to load both the game and then the mods in the game.   
-The advantage of this is that different mods can use different versions of the same dependencies.   
 
-The main goal was to be able to unload the whole game and the modding, change the mods/dlls around and then load it again.   
-This could result in a simular system to how Factory feels where the mod manager lives within the game.   
-Sadly it did not work out in the current way it is implemented because Harmony does not play well ALC's and it keeps references to objects within the Assemblies.   
-This results in the assemblies not unloading which means I can not swap the dll's (it locks them).   
-A probable way forward is using a seperate process for the game itself so the whole process can shut down, however communication between processes forms a barrier to doing it this way.   
+A POC/Prototype arbitrary code modloader for Kitten Space Agency.  
+The idea is to get to a Factorio like experience where mods can be managed in game and mods can be synced by restarting the game.  
+Currently this loader can be ran with this functionality in the background, or as a dumb loader just loading mods.  
+It makes use of Assembly Load Contexts to ensure mod dependencies are managed seperatly, reducing conflicts
+
+## Installation
+
+-   Download and unzip release from [Releases](https://github.com/StarMapLoader/StarMap/releases/latest).
+-   Run StarMapLoader.exe, this will fail and create a StarMapLoader.json.
+-   Open StarMapLoader.json and set the location of your KSA installation.
+-   Run StarMapLoader.exe again, this should launch KSA and load your mods.
+
+## Running as dumb loader
+
+If you do not want the seperate process and mod manager functionality, StarMap.exe can also be ran seperatly, this will just load the installed mods
+
+## Mod location
+
+Mods should be installed in the mods folder in the KSA installation, any KSA mod that has a dll with the same name as the mod that impelements the IStarMapMod interface will be loaded.
+
+## Mod creation
+
+For more information on mod creation, check out the example mods: [StarMap-ExampleMods](https://github.com/StarMapLoader/StarMap-ExampleMods).
+
+## Credits
+
+-   Lexi - [KSALoader](https://github.com/cheese3660/KsaLoader)

@@ -25,10 +25,10 @@ namespace StarMap
 
         protected override Assembly? Load(AssemblyName assemblyName)
         {
-            var existing = Default.Assemblies
-                .FirstOrDefault(a => a.FullName == assemblyName.FullName);
-            if (existing != null)
-                return existing;
+            var existingInDefault = Default.Assemblies
+                .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
+            if (existingInDefault != null)
+                return existingInDefault;
 
             var path = _gameDependencyResolver.ResolveAssemblyToPath(assemblyName);
 

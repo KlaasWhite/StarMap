@@ -1,59 +1,61 @@
-﻿using System.Text.Json;
+﻿using System.Collections;
+using System.Text.Json;
+using StarMap.Index.API;
 using StarMap.Types.Proto.IPC;
 
 namespace StarMapLoader
 {
     internal class ModRepository
     {
-        public List<ManagedModInformation> LoadedModInformation { get; private set; } = [];
+        public List<IPCMod> LoadedModInformation { get; private set; } = [];
         public bool HasChanges { get; private set; }
 
         private readonly string _modsPath;
+        private readonly IModRespositoryClient _foreignModRepository;
         private readonly ModDownloader _downloader = new();
 
-        private ManagedModUpdate[] _changes = [];
+        private IPCUpdateModInformation[] _changes = [];
 
 
-        public ModRepository(string modsPath)
+        public ModRepository(string gameLocation, IModRespositoryClient foreignModRepository)
         {
-            _modsPath = modsPath;
-
-            if (!Directory.Exists(modsPath))
+            var gameDirectory = Path.GetDirectoryName(gameLocation);
+            if (string.IsNullOrEmpty(gameDirectory))
             {
-                Directory.CreateDirectory(modsPath);
+                throw new ArgumentException("Invalid game location provided, unable to determine game directory.");
             }
 
-            var filePath = Path.Combine(modsPath, "starmap.json");
+            _modsPath = Path.Combine(gameDirectory, "mods");
+            _foreignModRepository = foreignModRepository;
+
+            if (!Directory.Exists(_modsPath))
+            {
+                Directory.CreateDirectory(_modsPath);
+            }
+
+            var filePath = Path.Combine(_modsPath, "starmap.json");
             if (!File.Exists(filePath))
             {
                 File.Create(filePath).Dispose();
-                File.WriteAllText(filePath, JsonSerializer.Serialize(new List<ManagedModInformation>
-                {
-                    new ManagedModInformation()
-                    {
-                        Name = "TestMod1",
-                        Version = "2.0.0.0"
-                    }
-                }));
+                File.WriteAllText(filePath, JsonSerializer.Serialize(new List<IPCMod>()));
             }
 
-            string jsonString = File.ReadAllText(Path.Combine(modsPath, "starmap.json"));
+            string jsonString = File.ReadAllText(Path.Combine(_modsPath, "starmap.json"));
 
-            LoadedModInformation = JsonSerializer.Deserialize<List<ManagedModInformation>>(jsonString) ?? [];
+            LoadedModInformation = JsonSerializer.Deserialize<List<IPCMod>>(jsonString) ?? [];
         }
 
-        public string[] GetPossibleMods()
+        public async Task<Mod[]> GetPossibleMods()
         {
-            return [.. _downloader.GetModsFromStore().Keys];
+            return await _foreignModRepository.GetMods();
         }
 
-        public ModInformation GetModInformation(string modName)
+        public async Task<ModDetails?> GetModInformation(string modId)
         {
-
-            return _downloader.GetModsFromStore()[modName];
+            return await _foreignModRepository.GetModDetails(Guid.Parse(modId));
         }
 
-        public void SetModUpdates(ManagedModUpdate[] updates)
+        public void SetModUpdates(IPCUpdateModInformation[] updates)
         {
             _changes = updates;
             HasChanges = true;
@@ -63,11 +65,11 @@ namespace StarMapLoader
         {
             HasChanges = false;
 
-            foreach (var mod in _changes)
+            foreach (var modChange in _changes)
             {
                 try
                 {
-                    var directoryPath = Path.Combine(_modsPath, mod.Name);
+                    var directoryPath = Path.Combine(_modsPath, modChange.Mod.Name);
 
                     if (Directory.Exists(directoryPath))
                     {
@@ -76,21 +78,22 @@ namespace StarMapLoader
 
                     Directory.CreateDirectory(directoryPath);
 
-                    if (!_downloader.DownloadMod(mod.Name, mod.AfterVersion, directoryPath) && !string.IsNullOrEmpty(mod.BeforeVersion))
+                    if (!_downloader.DownloadMod(modChange.Mod, modChange.AfterVersion, directoryPath) && modChange.BeforeVersion is not null)
                     {
                         Directory.Delete(directoryPath, true);
                         Directory.CreateDirectory(directoryPath);
-                        _downloader.DownloadMod(mod.Name, mod.BeforeVersion, directoryPath);
+                        _downloader.DownloadMod(modChange.Mod, modChange.BeforeVersion, directoryPath);
                     }
                     else
                     {
-                        var newModInfo = new ManagedModInformation()
+                        var newModInfo = new IPCMod()
                         {
-                            Version = mod.AfterVersion,
-                            Name = mod.Name
+                            Id = modChange.Mod.Id,
+                            Name = modChange.Mod.Name,
+                            Version = modChange.AfterVersion.Version
                         };
 
-                        var index = LoadedModInformation.FindIndex(modInfo => modInfo.Name == mod.Name);
+                        var index = LoadedModInformation.FindIndex(modInfo => modInfo.Id == newModInfo.Id);
 
                         if (index >= 0)
                         {
@@ -104,7 +107,7 @@ namespace StarMapLoader
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Unable to apply update for mod: {mod.Name} to version {mod.AfterVersion}: {ex}");
+                    Console.WriteLine($"Unable to apply update for mod: {modChange.Mod.Name} to version {modChange.AfterVersion?.Version ?? "<Version not filled in>"}: {ex}");
                 }
             }
 

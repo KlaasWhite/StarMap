@@ -17,7 +17,7 @@ jobs:
             PROJECT: StarMapLoader/StarMapLoader.csproj
             OUTPUT_PATH: ./publish
             NUGET_SOURCE: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-            EXCLUDE: "*.pdb *.xml DummyProgram.deps.json DummyProgram.runtimeconfig.json DummyProgram.pdb DummyProgram.exe Tomlyn.dll"
+            EXCLUDE: "*.pdb *.xml"
 
         steps:
             - uses: actions/checkout@v4
@@ -72,6 +72,14 @@ jobs:
                   NEW_VERSION="${{ steps.version.outputs.new }}"
                   git tag "$NEW_VERSION"
                   git push origin "$NEW_VERSION"
+
+            - name: Setup Github NuGet
+              run: |
+                  dotnet nuget add source \
+                  --username ${{ github.actor }} \
+                  --password ${{ secrets.GITHUB_TOKEN }} \
+                  --store-password-in-clear-text \
+                  --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
             - name: Build
               run: dotnet publish ${{ env.PROJECT }} -c Release -o ${{ env.OUTPUT_PATH }}

@@ -1,11 +1,6 @@
-﻿using DummyProgram;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using KSA;
 using System.Reflection;
 using System.Runtime.Loader;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace StarMap.Core
 {
@@ -20,29 +15,27 @@ namespace StarMap.Core
             _coreAssemblyLoadContext = coreAssemblyContext;
 
             _modDependencyResolver = new AssemblyDependencyResolver(
-                Path.GetFullPath(Path.Combine(mod.DirectoryPath, mod.Assembly.Name + ".dll"))
+                Path.GetFullPath(Path.Combine(mod.DirectoryPath, mod.Name + ".dll"))
             );
         }
 
         protected override Assembly? Load(AssemblyName assemblyName)
         {
             var existingInDefault = Default.Assemblies
-                .FirstOrDefault(a => a.FullName == assemblyName.FullName);
+                .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
             if (existingInDefault != null)
                 return existingInDefault;
 
             var existingInGameContext = _coreAssemblyLoadContext?.Assemblies
-                .FirstOrDefault(a => a.FullName == assemblyName.FullName);
+                .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
             if (existingInGameContext != null)
                 return existingInGameContext;
 
             var foundPath = _modDependencyResolver.ResolveAssemblyToPath(assemblyName);
-
             if (foundPath is null)
                 return null;
 
             var path = Path.GetFullPath(foundPath);
-
             return path != null ? LoadFromAssemblyPath(path) : null;
         }
     }

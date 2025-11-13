@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DummyProgram.Screens
+namespace KSA
 {
     public interface IScreen
     {

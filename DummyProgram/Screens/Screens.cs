@@ -4,11 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DummyProgram.Screens
+namespace KSA
 {
     public class MainScreen : IScreen
     {
-
         public static IScreen[] Screens { get; set; } = [new GameScreen(), new ExitScreen()];
 
         public string ScreenName => "Main";
@@ -59,6 +58,7 @@ namespace DummyProgram.Screens
 
         public void DoSomething()
         {
+            Program.ModLibrary.Mods.ForEach((mod) => mod.DoSomething());
             Console.WriteLine("GameScreen.DoSomething");
             Console.ReadLine();
         }

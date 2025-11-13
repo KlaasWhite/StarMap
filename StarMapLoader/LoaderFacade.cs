@@ -1,5 +1,6 @@
 ﻿using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
+using StarMap.Types;
 using StarMap.Types.Pipes;
 using StarMap.Types.Proto.IPC;
 
@@ -31,43 +32,74 @@ namespace StarMapLoader
 
             IMessage? response = null;
 
-            if (message.Is(ConnectRequest.Descriptor))
+            if (message.Is(IPCConnectRequest.Descriptor))
             {
-                response = new ConnectResponse()
+                response = new IPCConnectResponse()
                 {
-                    GameLocation = _config.GameFolder,
+                    GameLocation = _config.GameLocation,
                 };
 
                 OnProcessStarted?.Invoke(this, EventArgs.Empty);
             }
-            if (message.Is(ManagedModsRequest.Descriptor))
+            if (message.Is(IPCGetCurrentManagedModsRequest.Descriptor))
             {
-                var modsRepsonse = new ManagedModsResponse();
+                var modsRepsonse = new IPCGetCurrentManagedModsResponse();
                 modsRepsonse.Mods.AddRange(_repository.LoadedModInformation);
                 response = modsRepsonse;
             }
 
-            if (message.Is(AvailableModsRequest.Descriptor))
+            if (message.Is(IPCGetModsRequest.Descriptor))
             {
-                var availableModsResponse = new AvailableModsResponse();
-                availableModsResponse.Mods.AddRange(_repository.GetPossibleMods());
+                var availableModsResponse = new IPCGetModsResponse();
+                var availableMods = _repository.GetPossibleMods().GetAwaiter().GetResult().Select(repositoryMod => new IPCMod() 
+                { 
+                    Id = repositoryMod.Id,
+                    Name = repositoryMod.Name,
+                    Author = repositoryMod.Author,
+                });
+
+                availableModsResponse.Mods.AddRange(availableMods);
                 response = availableModsResponse;
             }
 
-            if (message.Is(ModInformationRequest.Descriptor))
+            if (message.Is(IPCGetModDetailsRequest.Descriptor))
             {
-                var modInformationRequest = message.Unpack<ModInformationRequest>();
+                var modDetailsRequest = message.Unpack<IPCGetModDetailsRequest>();
 
-                var modInformationResponse = new ModInformationResponse()
+                var modDetails = _repository.GetModInformation(modDetailsRequest.Id).GetAwaiter().GetResult();
+                if (modDetails is null)
                 {
-                    Mod = _repository.GetModInformation(modInformationRequest.Mod)
-                };
-                response = modInformationResponse;
+                    response = new IPCGetModDetailsResponse();
+                }
+                else
+                {
+                    var mod = new IPCModDetails()
+                    {
+                        Mod = new IPCMod()
+                        {
+                            Id = modDetails.Mod.Id,
+                            Name = modDetails.Mod.Name,
+                            Author = modDetails.Mod.Author,
+                        },
+                        Description = modDetails.Description,
+                    };
+                    mod.Versions.AddRange(modDetails.Versions.Select((version) => new IPCModVersion() 
+                    { 
+                        Id = version.Id,
+                        Version = version.Version,
+                        DownloadLocation = version.DownloadLocation,
+                    }));
+
+                    response = new IPCGetModDetailsResponse()
+                    {
+                        Mod = mod
+                    };
+                }
             }
 
-            if (message.Is(SetModUpdates.Descriptor))
+            if (message.Is(IPCSetManagedMods.Descriptor))
             {
-                var setModUpdates = message.Unpack<SetModUpdates>();
+                var setModUpdates = message.Unpack<IPCSetManagedMods>();
 
                 _repository.SetModUpdates([.. setModUpdates.Updates]);
 

@@ -1,21 +1,21 @@
-﻿using DummyProgram.Screens;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Reflection;
 
-namespace DummyProgram
+namespace KSA
 {
     public class Mod
     {
         public required string DirectoryPath { get; init; }
         public required AssemblyName Assembly { get; init; }
+        public required string Name { get; init; }
 
         public Mod() { }
         public void PrepareSystems()
         {
+        }
+
+        public void DoSomething()
+        {
+            Console.WriteLine($"Mod {Name} is doing something!");
         }
     }
 }

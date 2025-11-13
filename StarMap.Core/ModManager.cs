@@ -1,7 +1,5 @@
 ﻿
-
-using DummyProgram;
-using Google.Protobuf.WellKnownTypes;
+using KSA;
 using HarmonyLib;
 using StarMap.Types;
 using StarMap.Types.Mods;
@@ -16,7 +14,7 @@ namespace StarMap.Core
         private readonly AssemblyLoadContext _coreAssemblyLoadContext;
         private readonly IGameFacade _gameFacade;
 
-        private readonly TaskCompletionSource<ManagedModsResponse> _managedMods = new();
+        private readonly TaskCompletionSource<IPCGetCurrentManagedModsResponse> _managedMods = new();
         private readonly Dictionary<Mod, (IStarMapMod mod, ModAssemblyLoadContext assemblyContext)> _loadedMods = [];
 
         public ModManager(AssemblyLoadContext coreAssemblyLoadContext, IGameFacade gameFacade)
@@ -28,6 +26,7 @@ namespace StarMap.Core
         public void Init()
         {
             _ = RetrieveManagedMods();
+
             ModLoaderPatcher.Patch(this);
         }
 
@@ -47,7 +46,7 @@ namespace StarMap.Core
             if (!Directory.Exists(mod.DirectoryPath)) return;
 
             var modLoadContext = new ModAssemblyLoadContext(mod, _coreAssemblyLoadContext);
-            var modAssembly = modLoadContext.LoadFromAssemblyName(mod.Assembly);
+            var modAssembly = modLoadContext.LoadFromAssemblyName(new AssemblyName() { Name = mod.Name });
 
             var loadedMod = modAssembly.GetTypes().FirstOrDefault((type) => typeof(IStarMapMod).IsAssignableFrom(type) && !type.IsInterface).CreateInstance();
             if (loadedMod is not IStarMapMod starMapMod) return;
@@ -59,6 +58,8 @@ namespace StarMap.Core
                 modLoadContext.Unload();
                 return;
             }
+
+            Console.WriteLine($"Loaded mod: {mod.Name}");
 
             _loadedMods[mod] = (starMapMod, modLoadContext);
             return;
@@ -74,54 +75,53 @@ namespace StarMap.Core
 
         public async Task RetrieveManagedMods()
         {
-            var message = new ManagedModsRequest();
+            var message = new IPCGetCurrentManagedModsRequest();
 
             var response = await _gameFacade.RequestData(message);
 
-            if (!response.Is(ManagedModsResponse.Descriptor)) return;
+            if (!response.Is(IPCGetCurrentManagedModsResponse.Descriptor)) return;
 
-            _managedMods.SetResult(response.Unpack<ManagedModsResponse>());
+            _managedMods.SetResult(response.Unpack<IPCGetCurrentManagedModsResponse>());
         }
 
-        public ManagedModsResponse GetManagedMods()
+        public IPCGetCurrentManagedModsResponse GetManagedMods()
         {
-            Console.WriteLine("GetManagedMods");
             return _managedMods.Task.GetAwaiter().GetResult();
         }
 
-        public async Task<string[]> GetManagedModsAsync()
+        public async Task<IPCMod[]> GetAvailableModsAsync()
         {
-            var message = new AvailableModsRequest();
+            var message = new IPCGetModsRequest();
 
             var response = await _gameFacade.RequestData(message);
 
-            if (!response.Is(AvailableModsResponse.Descriptor)) return[];
+            if (!response.Is(IPCGetModsResponse.Descriptor)) return[];
 
-           return [.. response.Unpack<AvailableModsResponse>().Mods];
+           return [.. response.Unpack<IPCGetModsResponse>().Mods];
         }
 
-        public async Task<ModInformation?> GetModInformationAsync(string modName)
+        public async Task<IPCModDetails?> GetModInformationAsync(string id)
         {
-            var message = new ModInformationRequest()
+            var message = new IPCGetModDetailsRequest()
             {
-                Mod = modName
+                Id = id
             };
 
             var response = await _gameFacade.RequestData(message);
 
-            if (!response.Is(ModInformationResponse.Descriptor)) return null;
+            if (!response.Is(IPCGetModDetailsResponse.Descriptor)) return null;
 
-            return response.Unpack<ModInformationResponse>().Mod;
+            return response.Unpack<IPCGetModDetailsResponse>().Mod;
         }
 
-        public AssemblyName[] GetLoadedMods()
+        public string[] GetLoadedMods()
         {
             if (_loadedMods is null) return [];
 
-            return _loadedMods.Select(loadedMod => loadedMod.Key.Assembly).ToArray();
+            return _loadedMods.Select(loadedMod => loadedMod.Key.Name).ToArray();
         }
 
-        public async Task SetModUpdates(SetModUpdates update)
+        public async Task SetModUpdates(IPCSetManagedMods update)
         {
             await _gameFacade.RequestData(update);
         }

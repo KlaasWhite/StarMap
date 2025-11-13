@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 using Tomlyn.Model;
 using Tomlyn;
 
-namespace DummyProgram
+namespace KSA
 {
     public class ModLibrary
     {
-        private List<Mod> _mods = [];
+        public List<Mod> Mods = [];
 
         public ModLibrary() { }
         public void LoadAll()
@@ -60,11 +60,12 @@ namespace DummyProgram
                         var mod = new Mod
                         {
                             DirectoryPath = folder,
-                            Assembly = assemblyName
+                            Assembly = assemblyName,
+                            Name = assemblyName.Name
                         };
 
                         mod.PrepareSystems();
-                        _mods.Add(mod);
+                        Mods.Add(mod);
 
                     }
                 }
