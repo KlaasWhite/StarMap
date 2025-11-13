@@ -22,16 +22,16 @@ namespace StarMap
             await _pipe.ConnectAsync(default);
             _connected = true;
 
-            var connectResponse = await RequestData(new ConnectRequest());
+            var connectResponse = await RequestData(new IPCConnectRequest());
 
-            if (!connectResponse.Is(ConnectResponse.Descriptor)) return "";
+            if (!connectResponse.Is(IPCConnectResponse.Descriptor)) return "";
 
-            return connectResponse.Unpack<ConnectResponse>().GameLocation;
+            return connectResponse.Unpack<IPCConnectResponse>().GameLocation;
         }
 
         public async ValueTask DisposeAsync()
         {
-            await RequestData(new ClosePipeMessage());
+            //await RequestData(new IPCClosePipeMessage());
             _pipe.Dispose();
         }
 

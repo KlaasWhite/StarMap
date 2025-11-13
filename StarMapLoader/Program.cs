@@ -1,4 +1,6 @@
-﻿using StarMap.Types.Pipes;
+﻿using StarMap.Index.API;
+using StarMap.Types.Pipes;
+using StarMap.Types;
 using System.Diagnostics;
 
 namespace StarMapLoader
@@ -13,7 +15,10 @@ namespace StarMapLoader
         static async Task MainInner()
         {
             var config = new LoaderConfig();
-            var modRepository = new ModRepository(config.ModPath);
+            if (!config.TryLoadConfig()) return;
+
+            using var remoteModRepository = new ModRepositoryClient(config.RepositoryLocation);
+            var modRepository = new ModRepository(config.GameLocation, remoteModRepository);
 
             var shouldReload = true;
 
@@ -25,7 +30,7 @@ namespace StarMapLoader
             {
                 CancellationTokenSource stopGameCancelationTokenSource = new();
 
-                var gameSupervisor = new GameProcessSupervisor(config.GamePath, facade, pipeServer);
+                var gameSupervisor = new GameProcessSupervisor(config.GameLocation, facade, pipeServer);
 
                 await await gameSupervisor.TryStartGameAsync(stopGameCancelationTokenSource.Token);
 

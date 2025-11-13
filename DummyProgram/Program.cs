@@ -1,15 +1,14 @@
-﻿using DummyProgram.Screens;
-
-namespace DummyProgram
+﻿namespace KSA
 {
     public class Program
     {
+        public static ModLibrary ModLibrary = new ModLibrary();
+
         private static IScreen _currentScreen = new MainScreen();
 
         static void Main(string[] args)
         {
-            var library = new ModLibrary();
-            library.LoadAll();
+            ModLibrary.LoadAll();
 
             while (true)
             {

@@ -1,4 +1,6 @@
-﻿using StarMap.Types.Pipes;
+﻿using StarMap.Types;
+using StarMap.Types.Pipes;
+using StarMap.Types.Proto.IPC;
 using System.Runtime.Loader;
 
 namespace StarMap
@@ -9,13 +11,40 @@ namespace StarMap
         {
             if (args.Length < 1)
             {
-                Console.WriteLine("Usage: StarMap <pipeName>");
+                Console.WriteLine("Running Starmap in dumb mode!");
+                DumbModeInner();
                 return;
             }
 
+            Console.WriteLine("Running Starmap normally.");
+
             var pipeName = args[0];
+            Console.WriteLine($"Connection to pipe: {pipeName}");
 
             MainInner(pipeName).GetAwaiter().GetResult();
+        }
+
+        static void DumbModeInner()
+        {
+            var gameConfig = new LoaderConfig();
+
+            if (!gameConfig.TryLoadConfig())
+            {
+                return;
+            }
+
+            AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath("./0Harmony.dll"));
+
+            var gameAssemblyContext = new GameAssemblyLoadContext(gameConfig.GameLocation);
+            var dumbFacade = new DumbGameFacade();
+            var gameSurveyer = new GameSurveyer(dumbFacade, gameAssemblyContext, gameConfig.GameLocation);
+            if (!gameSurveyer.TryLoadModManagerAndGame(out _))
+            {
+                Console.WriteLine("Unable to load mod manager and game in dumb mode.");
+                return;
+            }
+
+            gameSurveyer.RunGame();
         }
 
         static async Task MainInner(string pipeName)

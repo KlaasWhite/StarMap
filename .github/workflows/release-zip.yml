@@ -17,7 +17,7 @@ jobs:
             PROJECT: StarMapLoader/StarMapLoader.csproj
             OUTPUT_PATH: ./publish
             NUGET_SOURCE: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-            EXCLUDE: "*.pdb *.xml DummyProgram.deps.json DummyProgram.runtimeconfig.json DummyProgram.pdb DummyProgram.exe Tomlyn.dll"
+            EXCLUDE: "*.pdb *.xml"
 
         steps:
             - uses: actions/checkout@v4
