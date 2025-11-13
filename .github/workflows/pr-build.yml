@@ -16,6 +16,7 @@ jobs:
         env:
             DOTNET_VERSION: 9.0
             PROJECT: StarMapLoader/StarMapLoader.csproj
+            NUGET_SOURCE: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
         steps:
             - uses: actions/checkout@v4
@@ -28,11 +29,7 @@ jobs:
 
             - name: Setup Github NuGet
               run: |
-                  dotnet nuget add source \
-                  --username ${{ github.actor }} \
-                  --password ${{ secrets.GITHUB_TOKEN }} \
-                  --store-password-in-clear-text \
-                  --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+                  dotnet nuget add source --username "${{ github.actor }}" --password "${{ secrets.GITHUB_TOKEN }}" --store-password-in-clear-text --name github "${{ env.NUGET_SOURCE }}"
 
             - name: Restore dependencies
               run: dotnet restore ${{ env.PROJECT }}
