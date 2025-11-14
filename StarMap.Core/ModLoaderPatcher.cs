@@ -13,6 +13,9 @@ namespace StarMap.Core
         {
             _modManager = modManager;
             _harmony?.PatchAll();
+
+            // Currently needed to force patch in release mode
+            Harmony.GetAllPatchedMethods();
         }
 
         public static void Unload()
