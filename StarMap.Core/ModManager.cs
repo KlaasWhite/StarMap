@@ -43,7 +43,12 @@ namespace StarMap.Core
 
         public void LoadMod(Mod mod)
         {
-            if (!Directory.Exists(mod.DirectoryPath)) return;
+            var fullPath = Path.GetFullPath(mod.DirectoryPath);
+            var filePath = Path.Combine(fullPath, $"{mod.Name}.dll");
+            var folderExists = Directory.Exists(fullPath);
+            var fileExists = File.Exists(filePath);
+
+            if (!folderExists || !fileExists) return;
 
             var modLoadContext = new ModAssemblyLoadContext(mod, _coreAssemblyLoadContext);
             var modAssembly = modLoadContext.LoadFromAssemblyName(new AssemblyName() { Name = mod.Name });

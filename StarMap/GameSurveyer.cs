@@ -46,6 +46,7 @@ namespace StarMap
             Debug.Assert(_game is not null, "Load needs to be called before running game");
 
             string[] args = [];
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(_gameLocation));
             _game.EntryPoint!.Invoke(null, [args]);
         }
 

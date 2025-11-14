@@ -18,7 +18,6 @@ namespace StarMap.Core
         public static void Unload()
         {
             _modManager = null;
-            //MainScreen.Screens = [];
             _harmony?.UnpatchAll();
         }
 
@@ -34,10 +33,6 @@ namespace StarMap.Core
         public static void AfterLoad()
         {
             _modManager?.OnAllModsLoaded();
-            /*var screens = MainScreen.Screens.ToList();
-            screens.Insert(MainScreen.Screens.Length - 1, new ModManagerScreen(_modManager));
-
-            MainScreen.Screens = screens.ToArray();*/
             _harmony?.UnpatchAll(_harmony.Id);
         }
     }

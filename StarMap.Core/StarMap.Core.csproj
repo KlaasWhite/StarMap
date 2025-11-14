@@ -8,14 +8,23 @@
 
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.1" />
-	  <PackageReference Include="StarMap.KSA.Dummy" Version="1.0.4">
-		  <ExcludeAssets>runtime</ExcludeAssets>
-	  </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\StarMap.API\StarMap.API.csproj" />
     <ProjectReference Include="..\StarMap.Types\StarMap.Types.csproj" />
   </ItemGroup>
+
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<Reference Include="..\..\Import\KSA.dll">
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(Configuration)' != 'Debug'">
+		<PackageReference Include="StarMap.KSA.Dummy" Version="1.0.4">
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</PackageReference>
+	</ItemGroup>
 
 </Project>
