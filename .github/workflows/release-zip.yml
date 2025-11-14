@@ -82,7 +82,7 @@ jobs:
                   --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
             - name: Build
-              run: dotnet publish ${{ env.PROJECT }} -c Release -o ${{ env.OUTPUT_PATH }}
+              run: dotnet publish ${{ env.PROJECT }} -c Release -o ${{ env.OUTPUT_PATH }} -r win-x64 --self-contained false
 
             - name: Ensure zip is available
               run: |
