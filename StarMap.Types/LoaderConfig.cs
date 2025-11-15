@@ -27,7 +27,7 @@ namespace StarMap.Types
         
             if (string.IsNullOrEmpty(config.GameLocation))
             {
-                Console.WriteLine("The 'GameLocation' property is empty.");
+                Console.WriteLine("The 'GameLocation' property in StarMapConfig.json is either empty or points to a non-existing file.");
                 return false;
             }
         
