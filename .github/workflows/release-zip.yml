@@ -118,8 +118,8 @@ jobs:
                     exit 0
                   fi
 
-                  echo "DEBUG: Previous tag: $prev"
-                  echo "DEBUG: Current commit: $current"
+                  echo "Previous tag: $prev"
+                  echo "Current commit: $current"
 
                   diff=$(git diff --name-only "$prev" "$current")
                   echo "diff_files=$diff" >> $GITHUB_OUTPUT
@@ -134,7 +134,7 @@ jobs:
               if: steps.api_check.outputs.changed == 'true'
               run: |
                   dotnet restore StarMap.API/StarMap.API.csproj
-                  dotnet pack \
+                  dotnet pack StarMap.API/StarMap.API.csproj \
                     -c Release \
                     -o ./nupkg \
                     /p:PackageVersion=${{ steps.version.outputs.new }} \
