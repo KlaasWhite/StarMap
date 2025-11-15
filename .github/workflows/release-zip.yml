@@ -118,8 +118,8 @@ jobs:
                     exit 0
                   fi
 
-                  echo "DEBUG: Previous tag: $prev"
-                  echo "DEBUG: Current commit: $current"
+                  echo "Previous tag: $prev"
+                  echo "Current commit: $current"
 
                   diff=$(git diff --name-only "$prev" "$current")
                   echo "diff_files=$diff" >> $GITHUB_OUTPUT
