@@ -8,8 +8,8 @@ It makes use of Assembly Load Contexts to ensure mod dependencies are managed se
 ## Installation
 
 -   Download and unzip release from [Releases](https://github.com/StarMapLoader/StarMap/releases/latest).
--   Run StarMapLoader.exe, this will fail and create a StarMapLoader.json.
--   Open StarMapLoader.json and set the location of your KSA installation.
+-   Run StarMapLoader.exe, this will fail and create a StarMapConfig.json.
+-   Open StarMapConfig.json and set the location of your KSA installation.
 -   Run StarMapLoader.exe again, this should launch KSA and load your mods.
 
 ## Running as dumb loader
