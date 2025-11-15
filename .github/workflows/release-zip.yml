@@ -60,7 +60,7 @@ jobs:
                   echo "Next version: $new_version"
 
                   # Export outputs for later steps
-                  echo "prev=$prev_version" >> $GITHUB_OUTPUT
+                  echo "prev=$current" >> $GITHUB_OUTPUT
                   echo "type=$bump_type" >> $GITHUB_OUTPUT
                   echo "new=$new_version" >> $GITHUB_OUTPUT
 
