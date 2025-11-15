@@ -1,6 +1,5 @@
 ﻿using StarMap.Types;
 using StarMap.Types.Pipes;
-using StarMap.Types.Proto.IPC;
 using System.Runtime.Loader;
 
 namespace StarMap
@@ -11,12 +10,12 @@ namespace StarMap
         {
             if (args.Length < 1)
             {
-                Console.WriteLine("Running Starmap in dumb mode!");
-                DumbModeInner();
+                Console.WriteLine("StarMapLoader - Running Starmap in solo mode!");
+                SoleModeInner();
                 return;
             }
 
-            Console.WriteLine("Running Starmap normally.");
+            Console.WriteLine("Running Starmap in loader mode.");
 
             var pipeName = args[0];
             Console.WriteLine($"Connection to pipe: {pipeName}");
@@ -24,7 +23,7 @@ namespace StarMap
             MainInner(pipeName).GetAwaiter().GetResult();
         }
 
-        static void DumbModeInner()
+        static void SoleModeInner()
         {
             var gameConfig = new LoaderConfig();
 
@@ -36,11 +35,11 @@ namespace StarMap
             AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath("./0Harmony.dll"));
 
             var gameAssemblyContext = new GameAssemblyLoadContext(gameConfig.GameLocation);
-            var dumbFacade = new DumbGameFacade();
+            var dumbFacade = new SoloGameFacade();
             var gameSurveyer = new GameSurveyer(dumbFacade, gameAssemblyContext, gameConfig.GameLocation);
-            if (!gameSurveyer.TryLoadModManagerAndGame(out _))
+            if (!gameSurveyer.TryLoadCoreAndGame())
             {
-                Console.WriteLine("Unable to load mod manager and game in dumb mode.");
+                Console.WriteLine("Unable to load mod manager and game in solo mode.");
                 return;
             }
 
@@ -57,7 +56,7 @@ namespace StarMap
             var gameLocation = await facade.Connect();
             var gameAssemblyContext = new GameAssemblyLoadContext(Path.GetFullPath(gameLocation));
             var gameSurveyer = new GameSurveyer(facade, gameAssemblyContext, gameLocation);
-            if (!gameSurveyer.TryLoadModManagerAndGame(out _)) return;
+            if (!gameSurveyer.TryLoadCoreAndGame()) return;
 
             gameSurveyer.RunGame();
 

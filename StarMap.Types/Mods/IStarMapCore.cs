@@ -2,7 +2,7 @@
 
 namespace StarMap.Types.Mods
 {
-    public interface IModManager
+    public interface IStarMapCore
     {
         void Init();
         void DeInit();

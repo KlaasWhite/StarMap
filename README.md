@@ -7,10 +7,10 @@ It makes use of Assembly Load Contexts to ensure mod dependencies are managed se
 ## Installation
 
 -   Download and unzip release from [Releases](https://github.com/StarMapLoader/StarMap/releases/latest).
--   Run StarMap.exe, this will fail and create a StarMapLoader.json.
--   Open StarMapLoader.json and set the location of your KSA installation.
-      - `GameLocation` should be set to the location of your KSA.dll, pointing directly to that file (e.g. `C:\\games\\Kitten Space Agency\\KSA.dll`)
-      - `RepositoryLocation` can be kept empty
+-   Run StarMap.exe, this will fail and create a StarMapConfig.json.
+-   Open StarMapConfig.json and set the location of your KSA installation.
+    -   `GameLocation` should be set to the location of your KSA.dll, pointing directly to that file (e.g. `C:\\games\\Kitten Space Agency\\KSA.dll`)
+    -   `RepositoryLocation` can be kept empty
 -   Run StarMap.exe again, this should launch KSA and load your mods.
 
 ## Mod location
@@ -23,8 +23,8 @@ For more information on mod creation, check out the example mods: [StarMap-Examp
 
 ## Future plans
 
-The goal is to create a modloader similar to the mod functionality in Factorio, where users can select mods in game taken from a remote repository, and that those mods than get installed after an automatic restart of the game   
-It currently does this by using two processes to host the game itself seperately so it can restart   
+The goal is to create a modloader similar to the mod functionality in Factorio, where users can select mods in game taken from a remote repository, and that those mods than get installed after an automatic restart of the game  
+It currently does this by using two processes to host the game itself seperately so it can restart  
 The idea would be to have the repository just be an index of mods, versions and download locations, and that the download locations themselves are seperate (for example github releases)
 
 ## Credits

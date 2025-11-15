@@ -1,6 +1,6 @@
-﻿namespace StarMap.Types
+﻿namespace StarMap.API
 {
-    public interface IStarMapMod
+    public interface IStarMapMod : IStarMapInterface
     {
         bool ImmediateUnload { get; }
         void OnImmediatLoad();
