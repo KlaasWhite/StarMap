@@ -9,7 +9,7 @@ It makes use of Assembly Load Contexts to ensure mod dependencies are managed se
 -   Download and unzip release from [Releases](https://github.com/StarMapLoader/StarMap/releases/latest).
 -   Run StarMap.exe, this will fail and create a StarMapConfig.json.
 -   Open StarMapConfig.json and set the location of your KSA installation.
-    -   `GameLocation` should be set to the location of your KSA.dll, pointing directly to that file (e.g. `C:\\games\\Kitten Space Agency\\KSA.dll`)
+    -   `GameLocation` should be set to the location where Kitten Space Agency was installed, pointing directly to that folder (e.g. `C:\\games\\Kitten Space Agency\\`)
     -   `RepositoryLocation` can be kept empty
 -   Run StarMap.exe again, this should launch KSA and load your mods.
 
