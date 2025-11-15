@@ -22,7 +22,7 @@ namespace StarMap.Types
             }
 
             var jsonString = File.ReadAllText("./StarMapConfig.json");
-            var config = System.Text.Json.JsonSerializer.Deserialize<LoaderConfig>(jsonString);
+            var config = JsonSerializer.Deserialize<LoaderConfig>(jsonString);
 
             if (config is null) return false;
 

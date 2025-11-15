@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace StarMap
 {
-    internal class DumbGameFacade : IGameFacade
+    internal class SoloGameFacade : IGameFacade
     {
         public Task<Any> RequestData(IMessage request)
         {
