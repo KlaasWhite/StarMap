@@ -13,27 +13,39 @@ namespace StarMap.Types
 
         public bool TryLoadConfig()
         {
-            if (!File.Exists("./StarMapConfig.json")) {
+            if (!File.Exists("./StarMapConfig.json"))
+            {
                 Console.WriteLine("Please fill the StarMapConfig.json and restart the program");
-                File.Create("./StarMapConfig.json").Dispose();
-                File.WriteAllText("./StarMapConfig.json", JsonSerializer.Serialize(new LoaderConfig()));
-                Console.ReadLine();
+                File.WriteAllText("./StarMapConfig.json", JsonSerializer.Serialize(new LoaderConfig(), new JsonSerializerOptions { WriteIndented = true }));
                 return false;
             }
-
+        
             var jsonString = File.ReadAllText("./StarMapConfig.json");
             var config = JsonSerializer.Deserialize<LoaderConfig>(jsonString);
-
+        
             if (config is null) return false;
-
-            if (string.IsNullOrEmpty(config.GameLocation) || !File.Exists(config.GameLocation))
+        
+            if (string.IsNullOrEmpty(config.GameLocation))
             {
                 Console.WriteLine("The 'GameLocation' property in StarMapConfig.json is either empty or points to a non-existing file.");
-                Console.ReadLine();
                 return false;
             }
-
-            GameLocation = config.GameLocation;
+        
+            string path = config.GameLocation;
+        
+            if (Directory.Exists(path))
+            {
+                path = Path.Combine(path, "KSA.dll");
+            }
+        
+            if (!File.Exists(path))
+            {
+                Console.WriteLine("Could not find KSA.dll. Make sure the folder or file path is correct:");
+                Console.WriteLine(path);
+                return false;
+            }
+        
+            GameLocation = path;
             return true;
         }
 
