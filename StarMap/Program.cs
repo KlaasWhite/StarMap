@@ -36,7 +36,7 @@ namespace StarMap
 
             var gameAssemblyContext = new GameAssemblyLoadContext(gameConfig.GameLocation);
             var dumbFacade = new SoloGameFacade();
-            var gameSurveyer = new GameSurveyer(dumbFacade, gameAssemblyContext, gameConfig.GameLocation);
+            using var gameSurveyer = new GameSurveyer(dumbFacade, gameAssemblyContext, gameConfig.GameLocation);
             if (!gameSurveyer.TryLoadCoreAndGame())
             {
                 Console.WriteLine("StarMap - Unable to load mod manager and game in solo mode.");
