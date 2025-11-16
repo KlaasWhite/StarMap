@@ -28,7 +28,7 @@ namespace StarMap.Types.Pipes
                 options: PipeOptions.Asynchronous);
 
 
-            Console.WriteLine($"Connecting to pipe {_pipeName}...");
+            Console.WriteLine($"StarMap - Connecting to pipe {_pipeName}...");
             await _client.ConnectAsync(cancellationToken);
 
             _readingCts = new CancellationTokenSource();

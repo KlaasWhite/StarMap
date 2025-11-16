@@ -13,11 +13,11 @@ namespace StarMap.Core.Patches
         [HarmonyPrefix]
         public static void BeforeOnDrawUi(double dt)
         {
-            var mods = StarMapCore.Instance?.LoadedMods.Mods.Get<IStarMapOnUi>() ?? [];
+            var methods = StarMapCore.Instance?.LoadedMods.Mods.Get<StarMapBeforeGuiAttribute>() ?? [];
 
-            foreach (var mod in mods)
+            foreach (var (_, @object, method) in methods)
             {
-                mod.OnBeforeUi(dt);
+                method.Invoke(@object, [dt]);
             }
         }
 
@@ -25,11 +25,11 @@ namespace StarMap.Core.Patches
         [HarmonyPostfix]
         public static void AfterOnDrawUi(double dt)
         {
-            var mods = StarMapCore.Instance?.LoadedMods.Mods.Get<IStarMapOnUi>() ?? [];
+            var methods = StarMapCore.Instance?.LoadedMods.Mods.Get<StarMapAfterGuiAttribute>() ?? [];
 
-            foreach (var mod in mods)
+            foreach (var (_, @object, method) in methods)
             {
-                mod.OnAfterUi(dt);
+                method.Invoke(@object, [dt]);
             }
         }
     }

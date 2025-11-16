@@ -10,15 +10,15 @@ namespace StarMap
         {
             if (args.Length < 1)
             {
-                Console.WriteLine("StarMapLoader - Running Starmap in solo mode!");
+                Console.WriteLine("StarMap - Running Starmap in solo mode!");
                 SoleModeInner();
                 return;
             }
 
-            Console.WriteLine("Running Starmap in loader mode.");
+            Console.WriteLine("StarMap - Running Starmap in loader mode.");
 
             var pipeName = args[0];
-            Console.WriteLine($"Connection to pipe: {pipeName}");
+            Console.WriteLine($"StarMap - Connection to pipe: {pipeName}");
 
             MainInner(pipeName).GetAwaiter().GetResult();
         }
@@ -39,7 +39,7 @@ namespace StarMap
             var gameSurveyer = new GameSurveyer(dumbFacade, gameAssemblyContext, gameConfig.GameLocation);
             if (!gameSurveyer.TryLoadCoreAndGame())
             {
-                Console.WriteLine("Unable to load mod manager and game in solo mode.");
+                Console.WriteLine("StarMap - Unable to load mod manager and game in solo mode.");
                 return;
             }
 

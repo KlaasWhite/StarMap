@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using KSA;
+﻿using KSA;
 using StarMap.API;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -9,29 +8,34 @@ namespace StarMap.Core.ModRepository
     internal class LoadedModRepository : IDisposable
     {
         private readonly AssemblyLoadContext _coreAssemblyLoadContext;
-        private readonly IEnumerable<Type> _registeredInterfaces = [];
+        private readonly Dictionary<string, StarMapMethodAttribute> _registeredMethodAttributes = [];
 
         private readonly ModRegistry _mods = new();
         public ModRegistry Mods => _mods;
+
+        private (string attributeName, StarMapMethodAttribute attribute)? ConvertAttributeType(Type attrType)
+        {
+            if ((Activator.CreateInstance(attrType) as StarMapMethodAttribute) is not StarMapMethodAttribute attrObject) return null;
+            return (attrType.Name, attrObject);
+        }
 
         public LoadedModRepository(AssemblyLoadContext coreAssemblyLoadContext)
         {
             _coreAssemblyLoadContext = coreAssemblyLoadContext;
 
-            var baseInterface = typeof(IStarMapInterface);
-            Assembly starMapTypes = baseInterface.Assembly;
+            Assembly coreAssembly = typeof(StarMapModAttribute).Assembly;
 
-            _registeredInterfaces = starMapTypes
+            _registeredMethodAttributes = coreAssembly
                 .GetTypes()
-                .Where(
-                    t => t.IsInterface &&
-                    baseInterface.IsAssignableFrom(t) &&
-                    t != baseInterface);
-        }
-
-        private bool IsStarMapMod(Type type)
-        {
-            return typeof(IStarMapMod).IsAssignableFrom(type) && !type.IsInterface;
+                .Where(t =>
+                    typeof(StarMapMethodAttribute).IsAssignableFrom(t) &&
+                    t.IsClass &&
+                    !t.IsAbstract &&
+                    t.GetCustomAttribute<AttributeUsageAttribute>()?.ValidOn.HasFlag(AttributeTargets.Method) == true
+                )
+                .Select(ConvertAttributeType)
+                .OfType<(string attributeName, StarMapMethodAttribute attribute)>()
+                .ToDictionary();
         }
 
         public void LoadMod(Mod mod)
@@ -46,45 +50,54 @@ namespace StarMap.Core.ModRepository
             var modLoadContext = new ModAssemblyLoadContext(mod, _coreAssemblyLoadContext);
             var modAssembly = modLoadContext.LoadFromAssemblyName(new AssemblyName() { Name = mod.Name });
 
-            var modClass = modAssembly.GetTypes().FirstOrDefault(IsStarMapMod);
+            var modClass = modAssembly.GetTypes().FirstOrDefault(type => type.IsDefined(typeof(StarMapModAttribute), inherit: false));
             if (modClass is null) return;
 
-            if (modClass.CreateInstance() is not IStarMapInterface modObject) return;
+            var modObject = Activator.CreateInstance(modClass);
+            if (modObject is null) return;
 
-            foreach (var interfaceType in _registeredInterfaces)
+            var classMethods = modClass.GetMethods();
+            var immediateLoadMethods = new List<MethodInfo>();
+
+            foreach (var classMethod in classMethods)
             {
-                if (interfaceType.IsAssignableFrom(modClass))
+                var stringAttrs = classMethod.GetCustomAttributes().Select((attr) => attr.GetType().Name).Where(_registeredMethodAttributes.Keys.Contains);
+                foreach (var stringAttr in stringAttrs)
                 {
-                    _mods.Add(interfaceType, modObject);
+                    var attr = _registeredMethodAttributes[stringAttr];
+
+                    if (!attr.IsValidSignature(classMethod)) return;
+
+                    if (attr.GetType() == typeof(StarMapModAttribute))
+                    {
+                        immediateLoadMethods.Add(classMethod);
+                    }
+
+                    _mods.Add(attr, modObject, classMethod);
                 }
             }
 
-            if (modObject is not IStarMapMod starMapMod) return;
-
-            starMapMod.OnImmediatLoad();
-
-            if (starMapMod.ImmediateUnload)
+            foreach (var method in immediateLoadMethods)
             {
-                modLoadContext.Unload();
-                return;
+                method.Invoke(modObject, [mod]);
             }
 
-            Console.WriteLine($"Loaded mod: {mod.Name}");
+            Console.WriteLine($"StarMap - Loaded mod: {mod.Name}");
         }
 
         public void OnAllModsLoaded()
         {
-            foreach (var mod in _mods.Get<IStarMapMod>())
+            foreach (var (_, @object, method) in _mods.Get<StarMapAllModsLoadedAttribute>())
             {
-                mod.OnFullyLoaded();
+                method.Invoke(@object, []);
             }
         }
 
         public void Dispose()
         {
-            foreach (var mod in _mods.Get<IStarMapMod>())
+            foreach (var (_, @object, method) in _mods.Get<StarMapUnloadAttribute>())
             {
-                mod.Unload();
+                method.Invoke(@object, []);
             }
 
             _mods.Dispose();
