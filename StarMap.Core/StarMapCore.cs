@@ -24,9 +24,7 @@ namespace StarMap.Core
 
         public void Init()
         {
-            _harmony.PatchAll();
-            // Currently needed to force patch in release mode
-            Harmony.GetAllPatchedMethods();
+            _harmony.PatchAll(typeof(StarMapCore).Assembly);
         }
 
         public void DeInit()

@@ -1,7 +1,6 @@
-﻿using System.Collections;
-using System.Text.Json;
-using StarMap.Index.API;
+﻿using StarMap.Index.API;
 using StarMap.Types.Proto.IPC;
+using System.Text.Json;
 
 namespace StarMapLoader
 {
@@ -107,7 +106,7 @@ namespace StarMapLoader
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Unable to apply update for mod: {modChange.Mod.Name} to version {modChange.AfterVersion?.Version ?? "<Version not filled in>"}: {ex}");
+                    Console.WriteLine($"StarMap - Unable to apply update for mod: {modChange.Mod.Name} to version {modChange.AfterVersion?.Version ?? "<Version not filled in>"}: {ex}");
                 }
             }
 

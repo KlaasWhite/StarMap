@@ -1,53 +1,42 @@
 ﻿using StarMap.API;
+using System.Reflection;
 
 namespace StarMap.Core.ModRepository
 {
     internal sealed class ModRegistry : IDisposable
     {
-        private readonly Dictionary<Type, List<IStarMapInterface>> _map = new();
+        private readonly Dictionary<Type, List<(StarMapMethodAttribute attribute, object @object, MethodInfo method)>> _map = new();
 
-        public void Add(Type iface, IStarMapInterface instance)
+        public void Add(StarMapMethodAttribute attribute, object @object, MethodInfo method)
         {
-            // --- type-safety checks ---
-            if (!typeof(IStarMapInterface).IsAssignableFrom(iface) || !iface.IsInterface)
-                throw new ArgumentException($"{iface} is not an interface inheriting {typeof(IStarMapInterface).Name}");
-
-            if (instance is null)
-                throw new ArgumentNullException(nameof(instance));
-
-            Type implType = instance.GetType();
-
-            if (!iface.IsAssignableFrom(implType))
-                throw new ArgumentException(
-                    $"{implType.Name} does not implement {iface.Name}"
-                );
+            var attributeType = attribute.GetType();
 
             // --- add instance ---
-            if (!_map.TryGetValue(iface, out var list))
+            if (!_map.TryGetValue(attributeType, out var list))
             {
                 list = [];
-                _map[iface] = list;
+                _map[attributeType] = list;
             }
 
-            list.Add(instance);
+            list.Add((attribute, @object, method));
         }
 
-        public IReadOnlyList<TInterface> Get<TInterface>()
-            where TInterface : IStarMapInterface
+        public IReadOnlyList<(StarMapMethodAttribute attribute, object @object, MethodInfo method)> Get<TAttribute>()
+            where TAttribute : Attribute
         {
-            if (_map.TryGetValue(typeof(TInterface), out var list))
+            if (_map.TryGetValue(typeof(TAttribute), out var list))
             {
-                return list.Cast<TInterface>().ToList();
+                return list.Cast<(StarMapMethodAttribute attribute, object @object, MethodInfo method)>().ToList();
             }
 
-            return Array.Empty<TInterface>();
+            return Array.Empty<(StarMapMethodAttribute attribute, object @object, MethodInfo method)>();
         }
 
-        public IReadOnlyList<IStarMapInterface> Get(Type iface)
+        public IReadOnlyList<(StarMapMethodAttribute attribute, object @object, MethodInfo method)> Get(Type iface)
         {
             return _map.TryGetValue(iface, out var list)
                 ? list
-                : Array.Empty<IStarMapInterface>();
+                : Array.Empty<(StarMapMethodAttribute attribute, object @object, MethodInfo method)>();
         }
 
         public void Dispose()
