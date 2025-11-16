@@ -61,7 +61,7 @@ namespace StarMap.Core.ModRepository
 
             if (modObject is not IStarMapMod starMapMod) return;
 
-            starMapMod.OnImmediatLoad();
+            starMapMod.OnImmediateLoad();
 
             if (starMapMod.ImmediateUnload)
             {
