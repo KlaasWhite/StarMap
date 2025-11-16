@@ -66,9 +66,9 @@ namespace StarMap.Core.ModRepository
                 {
                     var attr = _registeredMethodAttributes[stringAttr];
 
-                    if (!attr.IsValidSignature(classMethod)) return;
+                    if (!attr.IsValidSignature(classMethod)) continue;
 
-                    if (attr.GetType() == typeof(StarMapModAttribute))
+                    if (attr.GetType() == typeof(StarMapImmediateLoadAttribute))
                     {
                         immediateLoadMethods.Add(classMethod);
                     }
