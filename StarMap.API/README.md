@@ -8,9 +8,9 @@ Any method within this class that has any of the attributes will used, so if two
 
 ## Attributes
 
--   StarMapMod: Main attribute to mark the mod class
--   StarMapImmediateLoad: Called immediatly when the mod is loaded in KSA
--   StarMapAllModsLoaded: Called once all mods are loaded, can be used when this mod has a dependency on another mod
--   StarMapUnload: Called when KSA is unloaded
--   StarMapBeforeGui: Called just before KSA starts drawing its Ui
--   StarMapAfterGui: Called after KSA has drawn its Ui
+-   StarMapMod: Main attribute to mark the mod class.
+-   StarMapImmediateLoad: Called immediatly when the mod is loaded in KSA.
+-   StarMapAllModsLoaded: Called once all mods are loaded, can be used when this mod has a dependency on another mod.
+-   StarMapUnload: Called when KSA is unloaded.
+-   StarMapBeforeGui: Called just before KSA starts drawing its Ui.
+-   StarMapAfterGui: Called after KSA has drawn its Ui.
