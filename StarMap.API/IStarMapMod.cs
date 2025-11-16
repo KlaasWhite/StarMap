@@ -3,7 +3,7 @@
     public interface IStarMapMod : IStarMapInterface
     {
         bool ImmediateUnload { get; }
-        void OnImmediatLoad();
+        void OnImmediateLoad();
         void OnFullyLoaded();
         void Unload();
     }
