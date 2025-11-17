@@ -175,7 +175,7 @@ jobs:
             # Build the installer using the same version as ZIP
             - name: Build Inno Setup Installer
               run: |
-                  ISCC.exe installer\StarMapInstaller.iss /dAppVersion=${{ needs.build.outputs.version }} /dOutputName=StarMap-${{ needs.build.outputs.version }}
+                  ISCC.exe installer\WindowsInstaller.iss /dAppVersion=${{ needs.build.outputs.version }} /dOutputName=StarMap-${{ needs.build.outputs.version }}
 
             # Attach installer to the release
             - name: Attach installer to GitHub Release
