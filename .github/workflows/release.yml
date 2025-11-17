@@ -1,4 +1,4 @@
-name: Build and Release ZIP
+name: Release new version
 
 on:
     pull_request:
@@ -6,7 +6,7 @@ on:
         branches: [main]
 
 jobs:
-    release:
+    build:
         if: github.event.pull_request.merged == true
         runs-on: ubuntu-latest
         permissions:
@@ -18,7 +18,8 @@ jobs:
             OUTPUT_PATH: ./publish
             NUGET_SOURCE: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
             EXCLUDE: "*.pdb *.xml"
-
+        outputs:
+            version: ${{ steps.version.outputs.new }}
         steps:
             - uses: actions/checkout@v4
               with:
@@ -147,3 +148,38 @@ jobs:
                     /p:AssemblyVersion=${{ steps.version.outputs.new }} \
                     /p:FileVersion=${{ steps.version.outputs.new }}
                   dotnet nuget push ./nupkg/*.nupkg --source github --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
+
+            - name: Upload publish folder for Windows installer
+              uses: actions/upload-artifact@v4
+              with:
+                  name: publish
+                  path: ${{ env.OUTPUT_PATH }}
+
+    build-installer:
+        runs-on: windows-latest
+        needs: build # depends on your main build job
+        steps:
+            - uses: actions/checkout@v4
+
+            # Download the published files from Linux job
+            - name: Download publish folder
+              uses: actions/download-artifact@v4
+              with:
+                  name: publish
+                  path: publish
+
+            # Install Inno Setup via Chocolatey
+            - name: Install Inno Setup
+              run: choco install innosetup --yes
+
+            # Build the installer using the same version as ZIP
+            - name: Build Inno Setup Installer
+              run: |
+                  ISCC.exe installer\StarMapInstaller.iss /dAppVersion=${{ needs.build.outputs.version }} /dOutputName=StarMap-${{ needs.build.outputs.version }}
+
+            # Attach installer to the release
+            - name: Attach installer to GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: ${{ needs.build.outputs.version }}
+                  files: installer/dist/StarMap-${{ needs.build.outputs.version }}.exe
