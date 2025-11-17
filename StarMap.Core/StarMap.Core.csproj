@@ -16,9 +16,7 @@
   </ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<Reference Include="..\..\Import\KSA.dll">
-			<ExcludeAssets>runtime</ExcludeAssets>
-		</Reference>
+		<Reference Include="..\..\Import\KSA.dll" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'Debug'">

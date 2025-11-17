@@ -7,14 +7,13 @@
   </PropertyGroup>
 
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<Reference Include="..\..\Import\KSA.dll">
-			<ExcludeAssets>runtime</ExcludeAssets>
-		</Reference>
+		<Reference Include="..\..\Import\KSA.dll" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'Debug'">
 		<PackageReference Include="StarMap.KSA.Dummy" Version="1.0.6">
-			<ExcludeAssets>runtime</ExcludeAssets>
+			<IncludeAssets>compile; build; analyzers</IncludeAssets>
+			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
 	</ItemGroup>
 </Project>
