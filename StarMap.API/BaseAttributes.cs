@@ -19,7 +19,33 @@ namespace StarMap.API
     }
 
     /// <summary>
-    /// Methods marked with this attribute will be called immediately when the mod is loaded.
+    /// Methods marked with this attribute will be called before KSA is started.
+    /// </summary>
+    /// <remarks>
+    /// Methods using this attribute must match the following signature:
+    ///
+    /// <code>
+    /// public void MethodName();
+    /// </code>
+    ///
+    /// Specifically:
+    /// <list type="bullet">
+    ///   <item><description>No parameters are allowed.</description></item>
+    ///   <item><description>Return type must be <see cref="void"/>.</description></item>
+    ///   <item><description>Method must be an instance method (non-static).</description></item>
+    /// </list>
+    /// </remarks>
+    public class StarMapBeforeMainAttribute : StarMapMethodAttribute
+    {
+        public override bool IsValidSignature(MethodInfo method)
+        {
+            return method.ReturnType == typeof(void) &&
+                   method.GetParameters().Length == 0;
+        }
+    }
+
+    /// <summary>
+    /// Methods marked with this attribute will be called immediately when the mod is loaded by KSA.
     /// </summary>
     /// <remarks>
     /// Methods using this attribute must match the following signature:

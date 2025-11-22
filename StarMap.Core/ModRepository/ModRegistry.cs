@@ -1,22 +1,30 @@
-﻿using StarMap.API;
+﻿using KSA;
+using StarMap.API;
 using System.Reflection;
 
 namespace StarMap.Core.ModRepository
 {
     internal sealed class ModRegistry : IDisposable
     {
-        private readonly Dictionary<Type, List<(StarMapMethodAttribute attribute, object @object, MethodInfo method)>> _map = new();
+        private readonly Dictionary<Type, List<(StarMapMethodAttribute attribute, object @object, MethodInfo method)>> _map = [];
+        private readonly Dictionary<string, (object @object, MethodInfo method)> _beforeMainActions = [];
+        private readonly Dictionary<string, (object @object, MethodInfo method)> _prepareSystemsActions = [];
 
-        public void Add(StarMapMethodAttribute attribute, object @object, MethodInfo method)
+        public void Add(string modId, StarMapMethodAttribute attribute, object @object, MethodInfo method)
         {
             var attributeType = attribute.GetType();
 
-            // --- add instance ---
             if (!_map.TryGetValue(attributeType, out var list))
             {
                 list = [];
                 _map[attributeType] = list;
             }
+
+            if (attribute.GetType() == typeof(StarMapBeforeMainAttribute))
+                _beforeMainActions[modId] = (@object, method);
+
+            if (attribute.GetType() == typeof(StarMapImmediateLoadAttribute))
+                _prepareSystemsActions[modId] = (@object, method);
 
             list.Add((attribute, @object, method));
         }
@@ -37,6 +45,16 @@ namespace StarMap.Core.ModRepository
             return _map.TryGetValue(iface, out var list)
                 ? list
                 : Array.Empty<(StarMapMethodAttribute attribute, object @object, MethodInfo method)>();
+        }
+
+        public (object @object, MethodInfo method)? GetBeforeMainAction(string modId)
+        {
+            return _beforeMainActions.TryGetValue(modId, out var action) ? action : null;
+        }
+
+        public (object @object, MethodInfo method)? GetPrepareSystemsAction(string modId)
+        {
+            return _prepareSystemsActions.TryGetValue(modId, out var action) ? action : null;
         }
 
         public void Dispose()

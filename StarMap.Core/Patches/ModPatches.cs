@@ -10,7 +10,7 @@ namespace StarMap.Core.Patches
         [HarmonyPrefix]
         public static void OnLoadMod(this Mod __instance)
         {
-            StarMapCore.Instance?.LoadedMods.LoadMod(__instance);
+            StarMapCore.Instance?.LoadedMods.ModPrepareSystems(__instance);
         }
     }
 }

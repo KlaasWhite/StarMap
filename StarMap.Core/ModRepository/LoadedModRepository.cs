@@ -8,7 +8,10 @@ namespace StarMap.Core.ModRepository
     internal class LoadedModRepository : IDisposable
     {
         private readonly AssemblyLoadContext _coreAssemblyLoadContext;
+
         private readonly Dictionary<string, StarMapMethodAttribute> _registeredMethodAttributes = [];
+        private readonly Dictionary<string, bool> _attemptedMods = [];
+        private readonly Dictionary<string, ModAssemblyLoadContext> _modLoadContexts = [];
 
         private readonly ModRegistry _mods = new();
         public ModRegistry Mods => _mods;
@@ -38,23 +41,72 @@ namespace StarMap.Core.ModRepository
                 .ToDictionary();
         }
 
-        public void LoadMod(Mod mod)
+        public void Init()
         {
-            var fullPath = Path.GetFullPath(mod.DirectoryPath);
-            var filePath = Path.Combine(fullPath, $"{mod.Name}.dll");
-            var folderExists = Directory.Exists(fullPath);
-            var fileExists = File.Exists(filePath);
+            PrepareMods();
+        }
 
-            if (!folderExists || !fileExists) return;
+        private void PrepareMods()
+        {
+            ModLibrary.PrepareManifest();
 
-            var modLoadContext = new ModAssemblyLoadContext(mod, _coreAssemblyLoadContext);
-            var modAssembly = modLoadContext.LoadFromAssemblyName(new AssemblyName() { Name = mod.Name });
+            var mods = ModLibrary.Manifest.Mods;
+            if (mods is null) return;
 
-            var modClass = modAssembly.GetTypes().FirstOrDefault(type => type.IsDefined(typeof(StarMapModAttribute), inherit: false));
-            if (modClass is null) return;
+            string rootPath = "Content";
+            string path = Path.Combine(new ReadOnlySpan<string>(in rootPath));
+
+            foreach (var mod in mods)
+            {
+                var modPath = Path.Combine(path, mod.Id);
+
+                if (!LoadMod(mod.Id, modPath))
+                {
+                    _attemptedMods[mod.Id] = false;
+                    continue;
+                }
+
+                if (_mods.GetBeforeMainAction(mod.Id) is (object @object, MethodInfo method))
+                {
+                    method.Invoke(@object, []);
+                }
+                _attemptedMods[mod.Id] = true;
+            }
+        }
+
+        public void ModPrepareSystems(Mod mod)
+        {
+            if (!_attemptedMods.TryGetValue(mod.Id, out var succeeded))
+            {
+                succeeded = LoadMod(mod.Id, mod.DirectoryPath);
+            }
+
+            if (!succeeded) return;
+
+            if (_mods.GetPrepareSystemsAction(mod.Id) is (object @object, MethodInfo method))
+            {
+                method.Invoke(@object, [mod]);
+            }
+        }
+
+        private bool LoadMod(string modId, string modDirectory)
+        {
+            var fullPath = Path.GetFullPath(modDirectory);
+            var modAssemblyFile = Path.Combine(fullPath, $"{modId}.dll");
+            var assemblyExists = File.Exists(modAssemblyFile);
+
+            if (!assemblyExists) return false;
+
+            var modLoadContext = new ModAssemblyLoadContext(modId, modDirectory, _coreAssemblyLoadContext);
+            var modAssembly = modLoadContext.LoadFromAssemblyName(new AssemblyName() { Name = modId });
+
+            var modClass = modAssembly.GetTypes().FirstOrDefault(type => type.GetCustomAttributes().Any(attr => attr.GetType().Name == typeof(StarMapModAttribute).Name));
+            if (modClass is null) return false;
 
             var modObject = Activator.CreateInstance(modClass);
-            if (modObject is null) return;
+            if (modObject is null) return false;
+
+            _modLoadContexts.Add(modId, modLoadContext);
 
             var classMethods = modClass.GetMethods();
             var immediateLoadMethods = new List<MethodInfo>();
@@ -73,16 +125,12 @@ namespace StarMap.Core.ModRepository
                         immediateLoadMethods.Add(classMethod);
                     }
 
-                    _mods.Add(attr, modObject, classMethod);
+                    _mods.Add(modId, attr, modObject, classMethod);
                 }
             }
 
-            foreach (var method in immediateLoadMethods)
-            {
-                method.Invoke(modObject, [mod]);
-            }
-
-            Console.WriteLine($"StarMap - Loaded mod: {mod.Name}");
+            Console.WriteLine($"StarMap - Loaded mod: {modId} from {modAssemblyFile}");
+            return true;
         }
 
         public void OnAllModsLoaded()
@@ -98,6 +146,11 @@ namespace StarMap.Core.ModRepository
             foreach (var (_, @object, method) in _mods.Get<StarMapUnloadAttribute>())
             {
                 method.Invoke(@object, []);
+            }
+
+            foreach (var modLoadContext in _modLoadContexts.Values)
+            {
+                modLoadContext.Unload();
             }
 
             _mods.Dispose();
