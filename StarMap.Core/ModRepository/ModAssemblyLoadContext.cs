@@ -2,26 +2,26 @@
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace StarMap.Core
+namespace StarMap.Core.ModRepository
 {
     internal class ModAssemblyLoadContext : AssemblyLoadContext
     {
         private readonly AssemblyLoadContext _coreAssemblyLoadContext;
         private readonly AssemblyDependencyResolver _modDependencyResolver;
 
-        public ModAssemblyLoadContext(Mod mod, AssemblyLoadContext coreAssemblyContext)
+        public ModAssemblyLoadContext(string modId, string modDirectory, AssemblyLoadContext coreAssemblyContext)
             : base(isCollectible: true)
         {
             _coreAssemblyLoadContext = coreAssemblyContext;
 
             _modDependencyResolver = new AssemblyDependencyResolver(
-                Path.GetFullPath(Path.Combine(mod.DirectoryPath, mod.Name + ".dll"))
+                Path.GetFullPath(Path.Combine(modDirectory, modId + ".dll"))
             );
         }
 
         protected override Assembly? Load(AssemblyName assemblyName)
         {
-            var existingInDefault = Default.Assemblies
+            var existingInDefault = AssemblyLoadContext.Default.Assemblies
                 .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
             if (existingInDefault != null)
                 return existingInDefault;
@@ -31,12 +31,24 @@ namespace StarMap.Core
             if (existingInGameContext != null)
                 return existingInGameContext;
 
+            if (_coreAssemblyLoadContext != null)
+            {
+                try
+                {
+                    var asm = _coreAssemblyLoadContext.LoadFromAssemblyName(assemblyName);
+                    if (asm != null)
+                        return asm;
+                }
+                catch (FileNotFoundException)
+                {
+                }
+            }
+
             var foundPath = _modDependencyResolver.ResolveAssemblyToPath(assemblyName);
             if (foundPath is null)
                 return null;
 
-            var path = Path.GetFullPath(foundPath);
-            return path != null ? LoadFromAssemblyPath(path) : null;
+            return LoadFromAssemblyPath(Path.GetFullPath(foundPath));
         }
     }
 }

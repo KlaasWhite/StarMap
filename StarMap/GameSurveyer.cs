@@ -32,6 +32,15 @@ namespace StarMap
 
             _game = _gameAssemblyContext.LoadFromAssemblyPath(_gameLocation);
 
+            var gameDirectory = Path.GetDirectoryName(_gameLocation);
+            if (string.IsNullOrWhiteSpace(gameDirectory) || !Directory.Exists(gameDirectory))
+            {
+                Console.WriteLine("StarMap - Game directory not found");
+                return false;
+            }
+
+            Directory.SetCurrentDirectory(gameDirectory);
+
             _core = core;
             core.Init();
             return true;
@@ -42,15 +51,7 @@ namespace StarMap
             Debug.Assert(_game is not null, "Load needs to be called before running game");
 
             string[] args = [];
-
-            var gameDirectory = Path.GetDirectoryName(_gameLocation);
-            if (string.IsNullOrWhiteSpace(gameDirectory) || !Directory.Exists(gameDirectory))
-            {
-                Console.WriteLine("StarMap - Game directory not found");
-                return;
-            }
-
-            Directory.SetCurrentDirectory(gameDirectory);
+            
             _game.EntryPoint!.Invoke(null, [args]);
         }
 

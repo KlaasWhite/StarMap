@@ -24,6 +24,7 @@ namespace StarMap.Core
 
         public void Init()
         {
+            _loadedMods.Init();
             _harmony.PatchAll(typeof(StarMapCore).Assembly);
         }
 

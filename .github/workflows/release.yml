@@ -77,8 +77,8 @@ jobs:
             - name: Setup Github NuGet
               run: |
                   dotnet nuget add source \
-                  --username ${{ github.actor }} \
-                  --password ${{ secrets.GITHUB_TOKEN }} \
+                  --username ${{ secrets.ORG_PACKAGE_USERNAME }} \
+                  --password ${{ secrets.ORG_PACKAGE_TOKEN }} \
                   --store-password-in-clear-text \
                   --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
