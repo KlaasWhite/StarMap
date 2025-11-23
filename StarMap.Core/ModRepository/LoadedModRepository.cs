@@ -48,7 +48,9 @@ namespace StarMap.Core.ModRepository
 
         private void PrepareMods()
         {
-            ModLibrary.PrepareManifest();
+            var loadedManifest = ModLibrary.PrepareManifest();
+
+            if (!loadedManifest) return;
 
             var mods = ModLibrary.Manifest.Mods;
             if (mods is null) return;
